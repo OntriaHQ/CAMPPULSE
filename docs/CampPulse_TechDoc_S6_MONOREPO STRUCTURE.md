@@ -158,7 +158,7 @@ apps/api/
 │   │   ├── service.py
 │   │   ├── duplicate.py
 │   │   ├── routing.py           # Department auto-routing logic
-│   │   ├── storage.py           # GCP upload URL generation
+│   │   ├── storage.py           # R2 presigned upload URL generation
 │   │   ├── schemas.py
 │   │   ├── models.py
 │   │   ├── graphql/
@@ -442,7 +442,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://camppulse:devpassword@postgres:5432/camppulse_dev
       REDIS_URL: redis://redis:6379
       MAPBOX_TOKEN: ${MAPBOX_TOKEN}
-      GCP_BUCKET: ${GCP_BUCKET}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_PUBLIC_BASE_URL: ${R2_PUBLIC_BASE_URL}
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - postgres
@@ -518,10 +522,12 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 MAPBOX_TOKEN=pk.eyJ...
 MAPBOX_STYLE_URL=mapbox://styles/camppulse/...
 
-# GCP
-GCP_BUCKET=camppulse-uploads
-GCP_PROJECT_ID=camppulse
-GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+# Cloudflare R2 (S3-compatible object storage — incident photos)
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=camppulse-uploads
+R2_PUBLIC_BASE_URL=https://uploads.camppulse.ng
 
 # External routing
 OPENROUTESERVICE_API_KEY=ors_...

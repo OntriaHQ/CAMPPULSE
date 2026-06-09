@@ -342,7 +342,7 @@ photo:       file (optional, image/jpeg or image/png, max 5MB)
     "status": "submitted",
     "department": "infrastructure",
     "estimated_response_window": "2–4 hours",
-    "photo_url": "https://storage.googleapis.com/camppulse/..."
+    "photo_url": "https://uploads.camppulse.ng/incidents/uuid/photo.jpg"
   }
 }
 ```

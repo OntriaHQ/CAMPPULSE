@@ -77,7 +77,7 @@ The critical architectural insight is that these four concerns are not independe
 ┌─────────────────────────────────────────────────────────────────┐
 │                    EXTERNAL INTEGRATIONS                        │
 │                                                                 │
-│   Mapbox SDK          GCP Cloud Storage       Fly.io Edge       │
+│   Mapbox SDK          Cloudflare R2           Fly.io Edge       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,7 +100,7 @@ Nine independently scoped services, each owning its domain logic and its slice o
 PostgreSQL + PostGIS for all persistent, relational, and geospatial data. Redis for ephemeral state — aggregation windows, session data, pub/sub channels, hot route cache. No service owns the database server, but each service owns its schema namespace and never reads or writes outside it.
 
 **External Integrations**
-Mapbox for map rendering and base routing. GCP Cloud Storage for incident photo uploads. These are treated as external dependencies with abstraction layers so they can be swapped without service-level changes.
+Mapbox for map rendering and base routing. Cloudflare R2 for incident photo uploads. These are treated as external dependencies with abstraction layers so they can be swapped without service-level changes.
 
 ---
 
@@ -123,7 +123,7 @@ The protocol choice per operation is driven by the data flow pattern, not conven
 
 **Upstash Redis** provides managed Redis with HTTP-based access — suitable for serverless and edge environments, globally replicated, and zero-ops for a hackathon timeline.
 
-**GCP Cloud Storage** handles incident photo uploads — object storage with direct upload URLs issued by the backend, keeping binary data off the application server.
+**Cloudflare R2** handles incident photo uploads — S3-compatible object storage with presigned upload URLs issued by the backend, keeping binary data off the application server.
 
 **Mapbox** is consumed client-side via SDK with server-side token scoping. Route calculations that require dynamic road graph modifications (incident-based rerouting) are handled server-side via OpenRouteService or Mapbox Directions API with waypoint manipulation, with results returned to the client as compressed polylines.
 

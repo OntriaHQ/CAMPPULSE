@@ -145,7 +145,7 @@ incidents (PostgreSQL + PostGIS)
 - type: ENUM ('flooding', 'pothole', 'streetlight', 'water_leak',
               'trash', 'security', 'congestion', 'other')
 - description: TEXT
-- photo_url: VARCHAR (GCP Cloud Storage URL)
+- photo_url: VARCHAR (Cloudflare R2 public URL)
 - location: GEOMETRY(Point, 4326)       ← PostGIS
 - address_label: VARCHAR
 - severity: ENUM ('low', 'medium', 'high', 'critical')
@@ -207,7 +207,7 @@ channel: incident.status      → payload: { incident_id, status, updated_at }
 ### Dependencies
 - Auth Service
 - PostGIS (location storage and proximity queries)
-- GCP Cloud Storage (photo upload URL generation)
+- Cloudflare R2 (presigned photo upload URL generation)
 - Redis (event emission)
 - Notification Service (status change triggers)
 
@@ -239,7 +239,7 @@ api/services/incident/
 ├── routing.py         # Department auto-routing logic
 ├── schemas.py
 ├── models.py
-└── storage.py         # GCP upload URL generation
+└── storage.py         # R2 presigned upload URL generation
 ```
 
 ---

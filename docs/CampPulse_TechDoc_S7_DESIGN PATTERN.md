@@ -528,7 +528,7 @@ async def get_dashboard_summary() -> DashboardSummary:
 
 ### 7.5.1 Rationale
 
-CampPulse depends on three external services whose availability it cannot control — Mapbox, GCP Cloud Storage, and OpenRouteService. During a hackathon demo, a slow or failed Mapbox call that blocks for 30 seconds before timing out is indistinguishable from the entire system being broken. The circuit breaker prevents this by tracking failure rates per dependency and short-circuiting calls to failing dependencies before they are even attempted — returning a cached fallback or a graceful error immediately.
+CampPulse depends on three external services whose availability it cannot control — Mapbox, Cloudflare R2, and OpenRouteService. During a hackathon demo, a slow or failed Mapbox call that blocks for 30 seconds before timing out is indistinguishable from the entire system being broken. The circuit breaker prevents this by tracking failure rates per dependency and short-circuiting calls to failing dependencies before they are even attempted — returning a cached fallback or a graceful error immediately.
 
 ### 7.5.2 States
 
@@ -680,8 +680,8 @@ mapbox_breaker = CircuitBreaker(
     window_seconds=60
 )
 
-gcp_storage_breaker = CircuitBreaker(
-    name="gcp_storage",
+r2_storage_breaker = CircuitBreaker(
+    name="r2_storage",
     failure_threshold=5,
     recovery_timeout=30,
     window_seconds=60

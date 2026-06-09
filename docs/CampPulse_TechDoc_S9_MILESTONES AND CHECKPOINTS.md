@@ -189,7 +189,7 @@ async def test_auth_flow():
 - [ ] `incidents`, `incident_upvotes`, `incident_comments`, `camp_zones` tables migrated
 - [ ] `camp_zones` seeded with Redemption City zone polygons from `packages/map-config`
 - [ ] `POST /api/v1/incidents` — anonymous and authenticated submission
-- [ ] Photo upload to GCP Cloud Storage — URL stored on incident record
+- [ ] Photo upload to Cloudflare R2 — URL stored on incident record
 - [ ] Zone auto-detection on submission (PostGIS point-in-polygon)
 - [ ] Department auto-routing on submission (domain rule)
 - [ ] Duplicate detection within 50m radius operational
@@ -266,7 +266,7 @@ async def test_incident_flow():
 - Zone detection correct for all seeded zone polygons
 - Department routing deterministic — same type always maps to same department
 - Duplicate radius is exactly 50m — verified with coordinates at 49m and 51m
-- Photos stored in GCP, not in DB
+- Photos stored in R2, not in DB
 - Status transitions enforce the valid chain — invalid transitions return 422
 - Redis event payload contains all required fields
 
@@ -759,7 +759,7 @@ M3 and M4 can be built in parallel after M2 is complete. Everything else is sequ
 | Mapbox road data sparse for camp interior | High | High | Field run pre-build; custom road layer seeded before M3 |
 | WebSocket stability under load | Medium | High | Reconnect logic in M7; Fly.io concurrency limits configured |
 | Redis Pub/Sub message loss | Medium | Medium | Idempotent handlers; self-healing on next event trigger |
-| GCP Storage cold start latency | Low | Medium | Circuit breaker with local file fallback for demo |
+| R2 upload latency or credential misconfiguration | Low | Medium | Circuit breaker with local file fallback for demo |
 | Congestion threshold miscalibrated | Medium | Medium | Threshold in env var — adjustable without redeploy |
 | Demo environment differs from dev | Medium | High | Full smoke suite on staging in M7 before presentation |
 | Offline tile caching exceeds Mapbox free tier | Low | Low | Cache only frequently requested routes; monitor usage |

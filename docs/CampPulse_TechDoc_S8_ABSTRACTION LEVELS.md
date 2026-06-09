@@ -30,7 +30,7 @@ CampPulse is structured across four abstraction levels. Each level has a single 
 ┌────────────────────▼────────────────────┐
 │           LEVEL 4: DATA                 │  Persistence + state
 │    PostgreSQL · PostGIS · Redis ·       │  No business logic
-│    GCP Storage · Mapbox client          │  No HTTP concerns
+│    R2 · Mapbox client                   │  No HTTP concerns
 └─────────────────────────────────────────┘
 ```
 
@@ -263,7 +263,7 @@ async def create_incident(
     # Rule: resolve department from incident type
     department = resolve_department(data.type)
 
-    # Upload photo if provided (Level 4 — GCP)
+    # Upload photo if provided (Level 4 — Cloudflare R2)
     photo_url = await upload_photo(photo) if photo else None
 
     # Persist (Level 4 — PostgreSQL)
@@ -470,12 +470,12 @@ def estimate_response_window(severity: str, department: str) -> str:
 ## 8.5 Level 4 — Data
 
 ### Responsibility
-The data layer is the only layer permitted to communicate with external systems — PostgreSQL, Redis, GCP Storage, Mapbox, and OpenRouteService. It translates between the domain's typed objects and the persistence layer's native formats. It owns all SQL strings, all Redis commands, and all external API calls. Nothing above Level 4 writes SQL or calls redis directly.
+The data layer is the only layer permitted to communicate with external systems — PostgreSQL, Redis, Cloudflare R2, Mapbox, and OpenRouteService. It translates between the domain's typed objects and the persistence layer's native formats. It owns all SQL strings, all Redis commands, and all external API calls. Nothing above Level 4 writes SQL or calls redis directly.
 
 ### What it owns
 - All SQL query strings (via asyncpg or SQLAlchemy Core)
 - All Redis commands (via aioredis)
-- External API clients (Mapbox, GCP, OpenRouteService) — wrapped with circuit breakers
+- External API clients (Mapbox, R2, OpenRouteService) — wrapped with circuit breakers
 - Database connection pool management
 - Migration files (Alembic)
 
