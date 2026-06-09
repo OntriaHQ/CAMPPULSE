@@ -46,3 +46,10 @@ echo "$HEALTH" | grep -q '"db":"ok"'
 echo "$HEALTH" | grep -q '"redis":"ok"'
 
 echo "M0 complete"
+
+echo "--- M1: Auth ---"
+docker compose -f "$COMPOSE_FILE" exec -T api alembic upgrade head
+docker compose -f "$COMPOSE_FILE" exec -T redis sh -c 'for k in $(redis-cli --scan --pattern "ratelimit:*"); do redis-cli del "$k"; done' >/dev/null 2>&1 || true
+docker compose -f "$COMPOSE_FILE" exec -T api python tests/smoke/test_m1_auth.py
+
+echo "M1 complete"

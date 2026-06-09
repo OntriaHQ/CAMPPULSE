@@ -32,6 +32,9 @@ pnpm --filter @camppulse/mobile dev
 curl http://localhost:8000/health
 turbo run type-check
 pnpm smoke
+
+# M1: apply migrations (always inside API container)
+pnpm db:migrate
 ```
 
 ## Dev workflow

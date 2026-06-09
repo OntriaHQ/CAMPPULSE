@@ -1,6 +1,9 @@
 import asyncpg
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
 _pool: asyncpg.Pool | None = None
+engine: AsyncEngine | None = None
+async_session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
 def normalize_database_url(url: str) -> str:
@@ -25,6 +28,26 @@ def get_pool() -> asyncpg.Pool:
     if _pool is None:
         raise RuntimeError("Database pool is not initialized")
     return _pool
+
+
+async def create_sqlalchemy_engine(database_url: str) -> None:
+    global engine, async_session_factory
+    engine = create_async_engine(database_url, pool_pre_ping=True)
+    async_session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+async def close_sqlalchemy_engine() -> None:
+    global engine, async_session_factory
+    if engine is not None:
+        await engine.dispose()
+        engine = None
+        async_session_factory = None
+
+
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    if async_session_factory is None:
+        raise RuntimeError("SQLAlchemy session factory is not initialized")
+    return async_session_factory
 
 
 async def check_db_health() -> str:

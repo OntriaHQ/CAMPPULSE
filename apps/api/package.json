@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "echo 'Run API via: docker compose -f infra/docker-compose.yml up -d api'",
-    "type-check": "echo 'python type-check deferred to M1'"
+    "type-check": "echo 'python type-check deferred to M1'",
+    "db:migrate": "alembic upgrade head",
+    "test": "pytest -v"
   }
 }
