@@ -1,0 +1,11 @@
+{
+  "version": 8,
+  "name": "CampPulse Redemption City",
+  "metadata": {
+    "mapbox:autocomposite": true
+  },
+  "sources": {},
+  "layers": [],
+  "center": [3.3958, 6.9271],
+  "zoom": 14
+}

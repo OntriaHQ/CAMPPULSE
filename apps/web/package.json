@@ -1,0 +1,28 @@
+{
+  "name": "@camppulse/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "type-check": "tsc --noEmit",
+    "lint": "echo 'lint deferred to M1'",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@camppulse/constants": "workspace:*",
+    "@camppulse/map-config": "workspace:*",
+    "@camppulse/shared-types": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.3",
+    "vite": "^6.0.11"
+  }
+}

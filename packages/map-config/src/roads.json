@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "road_id": "main-avenue",
+        "name": "Main Avenue"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [3.3958, 6.9271],
+          [3.3975, 6.9285],
+          [3.4001, 6.9310]
+        ]
+      }
+    }
+  ]
+}

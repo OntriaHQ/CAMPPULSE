@@ -1,0 +1,5 @@
+{
+  "routeCacheTtlSeconds": 300,
+  "proximityRadiusMeters": 50,
+  "offlineRouteMaxAgeHours": 24
+}

@@ -1,0 +1,11 @@
+{
+  "hotspots": [
+    {
+      "id": "main-auditorium",
+      "name": "Main Auditorium",
+      "zone_id": "zone-a",
+      "coordinates": { "lat": 6.9271, "lon": 3.3958 },
+      "schedule": []
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "camppulse",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "docker compose -f infra/docker-compose.yml up -d postgres redis api && turbo dev --filter=@camppulse/web --filter=@camppulse/mobile",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "db:migrate": "turbo run db:migrate",
+    "db:seed": "turbo run db:seed",
+    "smoke": "bash scripts/smoke-test.sh",
+    "field-map": "python scripts/field-map.py"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3"
+  }
+}

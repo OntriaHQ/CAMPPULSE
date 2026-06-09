@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Redemption City Boundary",
+        "camp_id": "RC-2024"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [3.3900, 6.9220],
+            [3.4020, 6.9220],
+            [3.4020, 6.9320],
+            [3.3900, 6.9320],
+            [3.3900, 6.9220]
+          ]
+        ]
+      }
+    }
+  ]
+}

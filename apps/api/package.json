@@ -1,0 +1,8 @@
+{
+  "name": "api",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Run API via: docker compose -f infra/docker-compose.yml up -d api'",
+    "type-check": "echo 'python type-check deferred to M1'"
+  }
+}

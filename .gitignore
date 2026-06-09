@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Build outputs
+dist/
+build/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Turbo
+.turbo/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

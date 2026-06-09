@@ -1,0 +1,30 @@
+services:
+  postgres-test:
+    image: postgis/postgis:15-3.3
+    environment:
+      POSTGRES_DB: camppulse_test
+      POSTGRES_USER: camppulse
+      POSTGRES_PASSWORD: testpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_test:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U camppulse -d camppulse_test"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-test:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata_test:
