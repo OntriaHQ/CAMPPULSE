@@ -12,6 +12,7 @@ from gateway.config import settings
 from core.models import Base
 from services.auth.models import AuthSession  # noqa: F401
 from services.incident.models import CampZone, Incident, IncidentComment, IncidentUpvote  # noqa: F401
+from services.routing.models import RoadSegment  # noqa: F401
 from services.user.models import User  # noqa: F401
 
 config = context.config

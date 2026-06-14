@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"
 
+    mapbox_token: str = ""
+    openroute_service_api_key: str = ""
+
     rate_limit_guest: int = 60
     rate_limit_resident: int = 300
     rate_limit_driver: int = 300
