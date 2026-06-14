@@ -16,6 +16,7 @@ from gateway.health import router as health_router
 from gateway.middleware.logging import LoggingMiddleware
 from gateway.middleware.rate_limit import RateLimitMiddleware
 from services.auth.router import router as auth_router
+from services.incident.router import router as incident_router
 from services.user.router import rbac_router, router as user_router
 
 
@@ -50,6 +51,7 @@ app.add_middleware(LoggingMiddleware)
 
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1/auth")
+app.include_router(incident_router, prefix="/api/v1/incidents")
 app.include_router(user_router, prefix="/api/v1/users")
 if settings.environment == "development":
     app.include_router(rbac_router, prefix="/api/v1/users")
