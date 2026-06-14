@@ -16,3 +16,4 @@ geoalchemy2>=0.15.0
 python-multipart>=0.0.12
 aioboto3>=13.1.0
 aiohttp>=3.9.0
+websockets>=12.0

@@ -75,26 +75,10 @@ async def record_route_request(
 
 async def invalidate_route_cache(
     redis_client: redis.Redis,
-    zone: str | None = None,
 ) -> int:
-    if zone is None:
-        count = 0
-        async for key in redis_client.scan_iter(match="route:*"):
-            if not key.startswith(("route:freq:", "route:offline:")):
-                await redis_client.delete(key)
-                count += 1
-        return count
     count = 0
     async for key in redis_client.scan_iter(match="route:*"):
-        if key.startswith(("route:freq:", "route:offline:")):
-            continue
-        cached = await redis_client.get(key)
-        if cached:
-            try:
-                data = json.loads(cached)
-                if data.get("zone") == zone:
-                    await redis_client.delete(key)
-                    count += 1
-            except Exception:
-                pass
+        if not key.startswith(("route:freq:", "route:offline:")):
+            await redis_client.delete(key)
+            count += 1
     return count

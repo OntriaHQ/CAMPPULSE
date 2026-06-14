@@ -78,19 +78,19 @@ class RoutingSubscriber(BaseSubscriber):
             await session.commit()
 
     async def _on_congestion_confirmed(self, payload: dict) -> None:
-        zone = payload.get("zone")
-        count = await invalidate_route_cache(self.redis, zone)
+        zone = payload.get("zone", "unknown")
+        count = await invalidate_route_cache(self.redis)
         logger.info(
-            "Invalidated %d route cache entries for zone %s due to congestion",
+            "Invalidated %d route cache entries due to congestion in zone %s",
             count,
             zone,
         )
 
     async def _on_congestion_cleared(self, payload: dict) -> None:
-        zone = payload.get("zone")
-        count = await invalidate_route_cache(self.redis, zone)
+        zone = payload.get("zone", "unknown")
+        count = await invalidate_route_cache(self.redis)
         logger.info(
-            "Invalidated %d route cache entries for zone %s after congestion cleared",
+            "Invalidated %d route cache entries after congestion cleared in zone %s",
             count,
             zone,
         )

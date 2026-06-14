@@ -152,8 +152,7 @@ async def apply_restriction(
     await restrict_segment(session, segment_id, reason)
     await session.commit()
 
-    zone = segment.get("zone")
-    count = await invalidate_route_cache(redis_client, zone)
+    count = await invalidate_route_cache(redis_client)
 
     return {
         "segment_id": str(segment_id),
@@ -175,8 +174,7 @@ async def clear_restriction(
     await clear_segment_restriction(session, segment_id)
     await session.commit()
 
-    zone = segment.get("zone")
-    count = await invalidate_route_cache(redis_client, zone)
+    count = await invalidate_route_cache(redis_client)
 
     return {
         "segment_id": str(segment_id),
