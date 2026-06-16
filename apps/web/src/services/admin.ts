@@ -1,0 +1,190 @@
+import { gql } from './graphql';
+
+export interface DashboardSummary {
+  total_incidents: number;
+  open_incidents: number;
+  in_progress_incidents: number;
+  active_zones: number;
+  congestion_zones_count: number;
+}
+
+export interface IncidentType {
+  id: string;
+  type: string;
+  severity: string;
+  status: string;
+  zone: string | null;
+  description: string | null;
+  photo_url: string | null;
+  address_label: string | null;
+  upvote_count: number;
+  department: string | null;
+  reporter_name: string | null;
+  assignee_name: string | null;
+  created_at: string;
+  updated_at: string | null;
+  resolved_at: string | null;
+  location: { lat: number; lon: number } | null;
+}
+
+export interface HotspotType {
+  zone: string;
+  incident_count: number;
+  lat: number;
+  lon: number;
+}
+
+export interface EquityMetricType {
+  zone: string;
+  total_incidents: number;
+  avg_resolution_time_minutes: number;
+}
+
+export interface UserType {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  zone: string | null;
+}
+
+export interface MutationResponse {
+  success: boolean;
+  message: string | null;
+  id: string | null;
+}
+
+// Queries
+
+export async function fetchDashboardSummary(): Promise<DashboardSummary> {
+  return gql<{ dashboardSummary: DashboardSummary }>(`
+    query DashboardSummary {
+      dashboardSummary {
+        total_incidents
+        open_incidents
+        in_progress_incidents
+        active_zones
+        congestion_zones_count
+      }
+    }
+  `).then(d => d.dashboardSummary);
+}
+
+export async function fetchIncidentList(
+  status?: string,
+  zone?: string,
+  limit = 50,
+  offset = 0,
+): Promise<IncidentType[]> {
+  return gql<{ incidents: IncidentType[] }>(`
+    query Incidents($status: String, $zone: String, $limit: Int, $offset: Int) {
+      incidents(status: $status, zone: $zone, limit: $limit, offset: $offset) {
+        id
+        type
+        severity
+        status
+        zone
+        description
+        photo_url
+        address_label
+        upvote_count
+        department
+        reporter_name
+        assignee_name
+        created_at
+        updated_at
+        resolved_at
+        location { lat lon }
+      }
+    }
+  `, { status, zone, limit, offset }).then(d => d.incidents);
+}
+
+export async function fetchIncidentHotspots(): Promise<HotspotType[]> {
+  return gql<{ incidentHotspots: HotspotType[] }>(`
+    query IncidentHotspots {
+      incidentHotspots {
+        zone
+        incident_count
+        lat
+        lon
+      }
+    }
+  `).then(d => d.incidentHotspots);
+}
+
+export async function fetchEquityMetrics(): Promise<EquityMetricType[]> {
+  return gql<{ equityMetrics: EquityMetricType[] }>(`
+    query EquityMetrics {
+      equityMetrics {
+        zone
+        total_incidents
+        avg_resolution_time_minutes
+      }
+    }
+  `).then(d => d.equityMetrics);
+}
+
+export async function fetchUsers(role?: string, zone?: string, limit = 50, offset = 0): Promise<UserType[]> {
+  return gql<{ users: UserType[] }>(`
+    query Users($role: String, $zone: String, $limit: Int, $offset: Int) {
+      users(role: $role, zone: $zone, limit: $limit, offset: $offset) {
+        id
+        email
+        full_name
+        role
+        zone
+      }
+    }
+  `, { role, zone, limit, offset }).then(d => d.users);
+}
+
+// Mutations
+
+export async function gqlUpdateIncidentStatus(id: string, status: string, note?: string): Promise<MutationResponse> {
+  return gql<{ updateIncidentStatus: MutationResponse }>(`
+    mutation UpdateIncidentStatus($id: String!, $status: String!, $note: String) {
+      updateIncidentStatus(id: $id, status: $status, note: $note) {
+        success
+        message
+        id
+      }
+    }
+  `, { id, status, note }).then(d => d.updateIncidentStatus);
+}
+
+export async function gqlAssignIncident(id: string, userId: string, department?: string): Promise<MutationResponse> {
+  return gql<{ assignIncident: MutationResponse }>(`
+    mutation AssignIncident($id: String!, $userId: String!, $department: String) {
+      assignIncident(id: $id, userId: $userId, department: $department) {
+        success
+        message
+        id
+      }
+    }
+  `, { id, userId, department }).then(d => d.assignIncident);
+}
+
+export async function gqlBulkUpdateIncidentStatus(ids: string[], status: string): Promise<MutationResponse> {
+  return gql<{ bulkUpdateIncidentStatus: MutationResponse }>(`
+    mutation BulkUpdateIncidentStatus($ids: [String!]!, $status: String!) {
+      bulkUpdateIncidentStatus(ids: $ids, status: $status) {
+        success
+        message
+        id
+      }
+    }
+  `, { ids, status }).then(d => d.bulkUpdateIncidentStatus);
+}
+
+export async function gqlSendZoneBroadcast(zone: string, title: string, body: string): Promise<MutationResponse> {
+  return gql<{ sendZoneBroadcast: MutationResponse }>(`
+    mutation SendZoneBroadcast($zone: String!, $title: String!, $body: String!) {
+      sendZoneBroadcast(zone: $zone, title: $title, body: $body) {
+        success
+        message
+        id
+      }
+    }
+  `, { zone, title, body }).then(d => d.sendZoneBroadcast);
+}

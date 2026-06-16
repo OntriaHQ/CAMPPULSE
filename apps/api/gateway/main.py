@@ -20,6 +20,7 @@ from gateway.middleware.rate_limit import RateLimitMiddleware
 from services.admin.router import graphql_app, router as admin_router
 from services.auth.router import router as auth_router
 from services.congestion.hotspot_scheduler import HotspotScheduler
+from services.events.router import router as events_router
 from services.congestion.subscriber import CongestionSubscriber
 from services.incident.router import router as incident_router
 from services.notification.subscriber import NotificationSubscriber
@@ -110,6 +111,7 @@ app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1/auth")
 app.include_router(incident_router, prefix="/api/v1/incidents")
 app.include_router(routing_router, prefix="/api/v1/routes")
+app.include_router(events_router, prefix="/api/v1/events")
 app.include_router(user_router, prefix="/api/v1/users")
 app.include_router(admin_router, prefix="/api/v1/admin")
 # M4: WebSocket endpoints — no prefix (paths defined as /ws/location and /ws/location/guest)

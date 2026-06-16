@@ -9,6 +9,7 @@ import AdminAnalyticsPage  from './pages/admin/analytics';
 import AdminBroadcastPage  from './pages/admin/broadcast';
 import AdminDriversPage    from './pages/admin/drivers';
 import AdminEventsPage     from './pages/admin/events';
+import NavPage             from './pages/nav/index';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -20,6 +21,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/"       element={<Navigate to="/admin" replace />} />
       <Route path="/login"  element={<LoginPage />} />
+      <Route path="/nav"    element={<NavPage />} />
       <Route path="/admin" element={<ProtectedRoute><AdminDashboardPage /></ProtectedRoute>} />
       <Route path="/admin/incidents" element={<ProtectedRoute><AdminIncidentsPage /></ProtectedRoute>} />
       <Route path="/admin/map"       element={<ProtectedRoute><AdminMapPage /></ProtectedRoute>} />

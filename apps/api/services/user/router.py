@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Path, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import get_session
+from core.db.queries.admin import list_users_sql
 from core.responses import success_response
 from services.auth.dependencies import get_current_user, require_role
 from services.auth.schemas import UserProfile
@@ -36,6 +37,24 @@ def _user_profile(user: User) -> UserProfile:
         zone=user.zone,
         created_at=user.created_at,
     )
+
+
+@router.get("")
+async def fetch_users(
+    request: Request,
+    role: str | None = Query(default=None),
+    zone: str | None = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    _: Annotated[User, Depends(require_role("admin"))] = None,
+    session: Annotated[AsyncSession, Depends(get_session)] = ...,
+):
+    rows = await list_users_sql(session, role, zone, limit, offset)
+    users = [
+        {"id": str(r[0]), "email": r[1], "full_name": r[2], "role": r[3], "zone": r[4]}
+        for r in rows
+    ]
+    return success_response({"users": users, "total": len(users)}, get_request_id(request))
 
 
 @router.get("/me")

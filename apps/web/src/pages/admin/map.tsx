@@ -1,136 +1,261 @@
+import { useState, useEffect, useCallback } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
+import CampMap from '../../components/map/CampMap';
+import type { MapMarker } from '../../components/map/CampMap';
+import { fetchLiveMapData } from '../../services/drivers';
+import type { LiveMapData } from '../../services/drivers';
 
-const MAP_DOTS = [
-  { x: '48%', y: '42%', color: '#EF4444', title: 'Flooding – Camp Road near Medical'     },
-  { x: '50%', y: '10%', color: '#F97316', title: 'Congestion – North Gate Entrance'      },
-  { x: '75%', y: '55%', color: '#EAB308', title: 'Streetlight Out – Festival Arena East' },
-  { x: '20%', y: '65%', color: '#F97316', title: 'Water Supply – Canaan Land Block C'    },
-  { x: '30%', y: '80%', color: '#EAB308', title: 'Road Damage – South Camp Access Rd 2'  },
-  { x: '50%', y: '38%', color: '#EF4444', title: 'Power Outage – Auditorium Block D'     },
-];
-
-const SIDEBAR_REPORTS = [
-  { id: 'RPT-041', type: 'Flooding',         area: 'Camp Road',      severity: 'critical' },
-  { id: 'RPT-040', type: 'Crowd Congestion', area: 'North Gate',     severity: 'high'     },
-  { id: 'RPT-039', type: 'Streetlight Out',  area: 'Festival Arena', severity: 'medium'   },
-  { id: 'RPT-038', type: 'Water Supply',     area: 'Canaan Land',    severity: 'high'     },
-  { id: 'RPT-036', type: 'Power Outage',     area: 'Auditorium',     severity: 'critical' },
-];
-
-const AREA_SUMMARY = [
-  { name: 'Auditorium',     count: 12, color: '#EF4444' },
-  { name: 'North Gate',     count: 5,  color: '#F97316' },
-  { name: 'Festival Arena', count: 8,  color: '#EAB308' },
-  { name: 'Canaan Land',    count: 2,  color: '#22C55E' },
-];
-
-const SEV_COLOR: Record<string, string> = { critical: '#EF4444', high: '#F97316', medium: '#EAB308', low: '#22C55E' };
-const GRID_H = Array.from({ length: 9 }, (_, i) => `${(i + 1) * 10}%`);
-const GRID_V = Array.from({ length: 7 }, (_, i) => `${(i + 1) * 12.5}%`);
+const SEV_COLOR: Record<string, string> = {
+  critical: '#EF4444',
+  high: '#F97316',
+  medium: '#EAB308',
+  low: '#22C55E',
+};
 
 export default function AdminMapPage() {
+  const [data, setData] = useState<LiveMapData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedIncident, setSelectedIncident] = useState<MapMarker | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const d = await fetchLiveMapData();
+      setData(d);
+      setError('');
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  const incidentMarkers: MapMarker[] = (data?.incidents ?? []).map((inc) => ({
+    id: inc.id,
+    lat: inc.lat,
+    lng: inc.lon,
+    color: SEV_COLOR[inc.severity] ?? '#888',
+    label: `${inc.type} — ${inc.severity} [${inc.zone}]`,
+    size: 14,
+    data: inc as unknown as Record<string, unknown>,
+  }));
+
+  const userMarkers: MapMarker[] = (data?.users ?? []).map((u) => ({
+    id: `user-${u.user_id}`,
+    lat: u.lat,
+    lng: u.lon,
+    color: '#60a5fa',
+    label: `User in ${u.zone}`,
+    size: 8,
+  }));
+
+  const allMarkers = [...incidentMarkers, ...userMarkers];
+
+  const areaCounts: Record<string, number> = {};
+  (data?.incidents ?? []).forEach((inc) => {
+    const z = inc.zone ?? 'Unknown';
+    areaCounts[z] = (areaCounts[z] || 0) + 1;
+  });
+
+  const AREA_SUMMARY = Object.entries(areaCounts).map(([name, count]) => ({
+    name,
+    count,
+    color: count > 5 ? '#EF4444' : count > 2 ? '#F97316' : '#EAB308',
+  }));
+  const maxAreaCount = Math.max(...AREA_SUMMARY.map((a) => a.count), 1);
+
+  function handleMarkerClick(marker: MapMarker) {
+    setSelectedIncident(marker);
+  }
+
   return (
-    <AdminLayout title="Camp Map" subtitle="Redemption City · live issue overlay">
+    <AdminLayout title="Camp Map" subtitle="Redemption City · live Mapbox overlay">
       <div style={{ display: 'flex', gap: 20, height: 'calc(100vh - 156px)' }}>
+        {/* Map */}
+        <div style={{ flex: 1, position: 'relative' }}>
+          <CampMap
+            markers={allMarkers}
+            lines={[]}
+            onMarkerClick={handleMarkerClick}
+            height="100%"
+          />
 
-        {/* Map canvas */}
-        <div className="map-web" style={{ flex: 1 }}>
-          {GRID_H.map(p => <div key={`h${p}`} className="map-grid-h" style={{ top: p, left: 0, right: 0, height: 1 }} />)}
-          {GRID_V.map(p => <div key={`v${p}`} className="map-grid-v" style={{ left: p, top: 0, bottom: 0, width: 1 }} />)}
+          {error && (
+            <div style={{
+              position: 'absolute', top: 12, left: 12, right: 12,
+              padding: '8px 14px', borderRadius: 8,
+              background: 'rgba(239,68,68,0.9)', color: '#fff',
+              fontSize: 12, zIndex: 10,
+            }}>
+              {error}
+            </div>
+          )}
 
-          {/* North Gate — top center */}
-          <div className="map-zone-block" style={{ top: '4%', left: '35%', width: '30%', height: '14%', backgroundColor: 'rgba(14,165,233,0.07)', borderColor: 'rgba(14,165,233,0.22)' }}>
-            <span className="map-zone-name">North Gate</span>
-          </div>
-
-          {/* Auditorium — center */}
-          <div className="map-hub" style={{ top: '30%', left: '30%', width: '40%', height: '18%', fontSize: 11 }}>
-            Main Auditorium
-          </div>
-
-          {/* Camp Road — left spine */}
-          <div className="map-zone-block" style={{ top: '22%', left: '5%', width: '22%', height: '50%', backgroundColor: 'rgba(0,200,150,0.06)', borderColor: 'rgba(0,200,150,0.16)' }}>
-            <span className="map-zone-name">Camp Road</span>
-          </div>
-
-          {/* Festival Arena — right */}
-          <div className="map-zone-block" style={{ top: '22%', right: '5%', width: '26%', height: '40%', backgroundColor: 'rgba(249,115,22,0.06)', borderColor: 'rgba(249,115,22,0.18)' }}>
-            <span className="map-zone-name">Festival Arena</span>
-          </div>
-
-          {/* Canaan Land — bottom left */}
-          <div className="map-zone-block" style={{ bottom: '8%', left: '5%', width: '32%', height: '22%', backgroundColor: 'rgba(234,179,8,0.05)', borderColor: 'rgba(234,179,8,0.16)' }}>
-            <span className="map-zone-name">Canaan Land</span>
-          </div>
-
-          {/* South Camp — bottom right */}
-          <div className="map-zone-block" style={{ bottom: '8%', right: '5%', width: '30%', height: '22%', backgroundColor: 'rgba(139,92,246,0.05)', borderColor: 'rgba(139,92,246,0.14)' }}>
-            <span className="map-zone-name">South Camp</span>
-          </div>
-
-          {/* Road connectors */}
-          <div style={{ position: 'absolute', top: '18%', left: '27%', width: 2, height: '12%', background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ position: 'absolute', top: '48%', left: '27%', width: 2, height: '22%', background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ position: 'absolute', top: '48%', left: '70%', width: 2, height: '22%', background: 'rgba(255,255,255,0.05)' }} />
-
-          {/* Issue dots */}
-          {MAP_DOTS.map((d, i) => (
-            <div key={i} className="map-incident-dot" title={d.title}
-              style={{ left: d.x, top: d.y, background: d.color, width: 14, height: 14, boxShadow: `0 0 8px ${d.color}80` }} />
-          ))}
+          {loading && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'var(--textMuted)', fontSize: 13, zIndex: 10,
+            }}>
+              Loading live data…
+            </div>
+          )}
 
           {/* Legend */}
           <div style={{
-            position: 'absolute', bottom: 16, left: 16,
-            background: 'rgba(13,13,24,0.90)', border: '1px solid rgba(255,255,255,0.08)',
+            position: 'absolute', bottom: 16, left: 16, zIndex: 10,
+            background: 'rgba(13,13,24,0.90)',
+            border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 10, padding: '10px 14px',
             display: 'flex', gap: 14, alignItems: 'center',
           }}>
-            {[['Critical', '#EF4444'], ['High', '#F97316'], ['Medium', '#EAB308'], ['Low', '#22C55E']].map(([label, color]) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{label}</span>
+            {[
+              ['Critical', '#EF4444'],
+              ['High', '#F97316'],
+              ['Medium', '#EAB308'],
+              ['Low', '#22C55E'],
+              ['User', '#60a5fa'],
+            ].map(([label, color]) => (
+              <div key={label as string} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: color as string,
+                }} />
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>
+                  {label as string}
+                </span>
               </div>
             ))}
           </div>
+
+          {/* Selected incident popup */}
+          {selectedIncident && (
+            <div style={{
+              position: 'absolute', top: 12, right: 12, zIndex: 10,
+              background: 'rgba(13,13,24,0.95)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 10, padding: 14, maxWidth: 240,
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>
+                  {String(selectedIncident.data?.type ?? 'Incident')}
+                </span>
+                <button
+                  onClick={() => setSelectedIncident(null)}
+                  style={{
+                    background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)',
+                    cursor: 'pointer', fontSize: 16, padding: 0, lineHeight: 1,
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
+                <div>Severity: {String(selectedIncident.data?.severity ?? '—')}</div>
+                <div>Status: {String(selectedIncident.data?.status ?? '—')}</div>
+                <div>Zone: {String(selectedIncident.data?.zone ?? '—')}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
         <div style={{ width: 280, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div className="card" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            <div className="card-title">Open Reports</div>
-            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {SIDEBAR_REPORTS.map(r => (
-                <div key={r.id} style={{
-                  padding: '12px 14px', borderRadius: 10,
-                  background: 'var(--surface2)', border: '1px solid var(--border)',
-                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: SEV_COLOR[r.severity], flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{r.type}</div>
-                    <div style={{ fontSize: 11, color: 'var(--textMuted)', marginTop: 2 }}>{r.area}</div>
-                  </div>
-                  <span style={{ fontSize: 10, color: SEV_COLOR[r.severity], fontWeight: 600, textTransform: 'uppercase' }}>
-                    {r.severity}
-                  </span>
+          <div
+            className="card"
+            style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}
+          >
+            <div className="card-title">
+              Open Reports ({incidentMarkers.length})
+            </div>
+            <div
+              style={{
+                flex: 1, overflowY: 'auto',
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}
+            >
+              {incidentMarkers.length === 0 ? (
+                <div style={{ padding: 20, textAlign: 'center', color: 'var(--textMuted)', fontSize: 12 }}>
+                  No open incidents
                 </div>
-              ))}
+              ) : (
+                incidentMarkers.slice(0, 15).map((m) => (
+                  <div
+                    key={m.id}
+                    onClick={() => handleMarkerClick(m)}
+                    style={{
+                      padding: '12px 14px', borderRadius: 10,
+                      background: 'var(--surface2)',
+                      border: '1px solid var(--border)',
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%',
+                      background: m.color, flexShrink: 0,
+                    }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>
+                        {m.label?.split(' —')[0] ?? 'Incident'}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--textMuted)', marginTop: 2 }}>
+                        {String(m.data?.zone ?? 'Unknown')}
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: 10, color: m.color,
+                      fontWeight: 600, textTransform: 'uppercase',
+                    }}>
+                      {String(m.data?.severity ?? '')}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="card">
             <div className="card-title">Reports by Area</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {AREA_SUMMARY.map(a => (
-                <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, width: 96, color: 'var(--textSub)', flexShrink: 0 }}>{a.name}</span>
-                  <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'var(--surface2)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: a.color, width: `${(a.count / 12) * 100}%`, borderRadius: 2 }} />
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: a.color, width: 20 }}>{a.count}</span>
+              {AREA_SUMMARY.length === 0 ? (
+                <div style={{ padding: 10, textAlign: 'center', color: 'var(--textMuted)', fontSize: 12 }}>
+                  No area data
                 </div>
-              ))}
+              ) : (
+                AREA_SUMMARY.map((a) => (
+                  <div key={a.name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      fontSize: 12, fontWeight: 600, width: 96,
+                      color: 'var(--textSub)', flexShrink: 0,
+                    }}>
+                      {a.name}
+                    </span>
+                    <div style={{
+                      flex: 1, height: 4, borderRadius: 2,
+                      background: 'var(--surface2)', overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%', background: a.color,
+                        width: `${(a.count / maxAreaCount) * 100}%`,
+                        borderRadius: 2,
+                      }} />
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: a.color, width: 20 }}>
+                      {a.count}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+            <div style={{ marginTop: 8, fontSize: 11, color: 'var(--textMuted)' }}>
+              {data?.users.length ?? 0} active users on map
             </div>
           </div>
         </div>

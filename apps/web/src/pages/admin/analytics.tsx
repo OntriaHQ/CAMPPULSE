@@ -1,43 +1,89 @@
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
-
-const TREND = [
-  { day: 'Mon', count: 18 },
-  { day: 'Tue', count: 24 },
-  { day: 'Wed', count: 31 },
-  { day: 'Thu', count: 22 },
-  { day: 'Fri', count: 41 },
-  { day: 'Sat', count: 38 },
-  { day: 'Sun', count: 27 },
-];
-
-const BY_TYPE = [
-  { label: 'Flooding',         count: 41, pct: 0.88 },
-  { label: 'Crowd Congestion', count: 28, pct: 0.60 },
-  { label: 'Streetlight Out',  count: 22, pct: 0.47 },
-  { label: 'Water Supply',     count: 18, pct: 0.39 },
-  { label: 'Road Damage',      count: 11, pct: 0.24 },
-  { label: 'Power Outage',     count: 7,  pct: 0.15 },
-];
-
-const BY_AREA = [
-  { label: 'Auditorium',     count: 47, pct: 1.00, color: '#EF4444' },
-  { label: 'North Gate',     count: 31, pct: 0.66, color: '#F97316' },
-  { label: 'Festival Arena', count: 29, pct: 0.62, color: '#EAB308' },
-  { label: 'Canaan Land',    count: 20, pct: 0.43, color: '#22C55E' },
-];
-
-const STATS = [
-  { label: 'Total This Week',   value: '201', delta: '+18% vs last service', dir: 'down' },
-  { label: 'Avg. Response',     value: '14m',  delta: '-3m improvement',      dir: 'up'  },
-  { label: 'Resolution Rate',   value: '70%',  delta: '+5% vs last week',     dir: 'up'  },
-  { label: 'Unresolved Critical', value: '8',  delta: '2 need escalation',    dir: 'down' },
-];
-
-const maxTrend = Math.max(...TREND.map(t => t.count));
+import { fetchDashboardSummary, fetchIncidentList, fetchIncidentHotspots, fetchEquityMetrics } from '../../services/admin';
+import type { DashboardSummary, HotspotType, EquityMetricType, IncidentType } from '../../services/admin';
 
 export default function AdminAnalyticsPage() {
+  const [summary,  setSummary]  = useState<DashboardSummary | null>(null);
+  const [hotspots, setHotspots] = useState<HotspotType[]>([]);
+  const [equity,   setEquity]   = useState<EquityMetricType[]>([]);
+  const [incidents, setIncidents] = useState<IncidentType[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
+
+  useEffect(() => {
+    Promise.all([
+      fetchDashboardSummary(),
+      fetchIncidentHotspots(),
+      fetchEquityMetrics(),
+      fetchIncidentList(undefined, undefined, 200),
+    ])
+      .then(([s, h, e, incs]) => {
+        setSummary(s);
+        setHotspots(h);
+        setEquity(e);
+        setIncidents(incs);
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout title="Analytics" subtitle="Issue trends across Redemption City">
+        <div style={{ padding: '40px 24px', textAlign: 'center', color: 'var(--textMuted)', fontSize: 13 }}>Loading analytics...</div>
+      </AdminLayout>
+    );
+  }
+
+  const byType: Record<string, number> = {};
+  const byArea: Record<string, number> = {};
+  const severityBreak: Record<string, number> = { critical: 0, high: 0, medium: 0, low: 0 };
+  incidents.forEach(inc => {
+    byType[inc.type] = (byType[inc.type] || 0) + 1;
+    const z = inc.zone ?? 'Unknown';
+    byArea[z] = (byArea[z] || 0) + 1;
+    const sev = inc.severity || 'low';
+    severityBreak[sev] = (severityBreak[sev] || 0) + 1;
+  });
+
+  const maxType = Math.max(...Object.values(byType), 1);
+  const maxArea = Math.max(...Object.values(byArea), 1);
+  const totalSev = Object.values(severityBreak).reduce((a, b) => a + b, 0) || 1;
+
+  const STATS = summary ? [
+    { label: 'Total Reports',  value: String(summary.total_incidents), delta: `${summary.open_incidents} open`, dir: 'down' },
+    { label: 'Active Zones',   value: String(summary.active_zones),    delta: `${summary.congestion_zones_count} congested`, dir: summary.congestion_zones_count > 0 ? 'down' : 'up' },
+    { label: 'Open Incidents', value: String(summary.open_incidents), delta: `${summary.in_progress_incidents} in progress`, dir: 'down' },
+    { label: 'Resolution Rate', value: summary.total_incidents > 0 ? `${Math.round((1 - summary.open_incidents / summary.total_incidents) * 100)}%` : '0%', delta: 'vs total', dir: 'up' },
+  ] : [];
+
+  const BY_AREA = Object.entries(byArea)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 6)
+    .map(([label, count]) => ({
+      label,
+      count,
+      pct: count / maxArea,
+      color: count > 10 ? '#EF4444' : count > 5 ? '#F97316' : count > 2 ? '#EAB308' : '#22C55E',
+    }));
+
+  const BY_TYPE = Object.entries(byType)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8)
+    .map(([label, count]) => ({ label, count, pct: count / maxType }));
+
+  const SEVERITY = [
+    { label: 'Critical', count: severityBreak.critical, color: '#EF4444', pct: severityBreak.critical / totalSev },
+    { label: 'High',     count: severityBreak.high,     color: '#F97316', pct: severityBreak.high / totalSev },
+    { label: 'Medium',   count: severityBreak.medium,   color: '#EAB308', pct: severityBreak.medium / totalSev },
+    { label: 'Low',      count: severityBreak.low,      color: '#22C55E', pct: severityBreak.low / totalSev },
+  ];
+
   return (
     <AdminLayout title="Analytics" subtitle="Issue trends across Redemption City">
+      {error && <div style={{ padding: 12, marginBottom: 16, background: 'rgba(239,68,68,0.12)', borderRadius: 10, color: '#EF4444', fontSize: 13 }}>{error}</div>}
+
       <div className="stats-grid mb-6">
         {STATS.map(s => (
           <div key={s.label} className="stat-card">
@@ -49,32 +95,6 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <div className="grid-2">
-        {/* Daily volume */}
-        <div className="card">
-          <div className="card-title">Daily Reports (This Week)</div>
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 140, marginBottom: 10 }}>
-            {TREND.map(t => (
-              <div key={t.day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, height: '100%', justifyContent: 'flex-end' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--textSub)' }}>{t.count}</span>
-                <div style={{
-                  width: '100%', borderRadius: 6,
-                  height: `${(t.count / maxTrend) * 110}px`,
-                  background: 'linear-gradient(180deg, var(--accent), var(--accentEnd))',
-                  opacity: 0.85,
-                }} />
-              </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {TREND.map(t => (
-              <div key={t.day} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: 'var(--textMuted)', fontWeight: 500 }}>
-                {t.day}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* By area */}
         <div className="card">
           <div className="card-title">Reports by Area</div>
           <div className="bar-chart">
@@ -87,10 +107,10 @@ export default function AdminAnalyticsPage() {
                 <span className="bar-value" style={{ color: b.color }}>{b.count}</span>
               </div>
             ))}
+            {BY_AREA.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--textMuted)', fontSize: 13 }}>No data</div>}
           </div>
         </div>
 
-        {/* By type */}
         <div className="card">
           <div className="card-title">Reports by Issue Type</div>
           <div className="bar-chart">
@@ -103,18 +123,13 @@ export default function AdminAnalyticsPage() {
                 <span className="bar-value">{b.count}</span>
               </div>
             ))}
+            {BY_TYPE.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--textMuted)', fontSize: 13 }}>No data</div>}
           </div>
         </div>
 
-        {/* Severity breakdown */}
         <div className="card">
           <div className="card-title">Severity Breakdown</div>
-          {[
-            { label: 'Critical', count: 34, color: '#EF4444', pct: 0.27 },
-            { label: 'High',     count: 52, color: '#F97316', pct: 0.41 },
-            { label: 'Medium',   count: 28, color: '#EAB308', pct: 0.22 },
-            { label: 'Low',      count: 13, color: '#22C55E', pct: 0.10 },
-          ].map(s => (
+          {SEVERITY.map(s => (
             <div key={s.label} style={{ marginBottom: 14 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: s.color }}>{s.label}</span>
@@ -126,7 +141,49 @@ export default function AdminAnalyticsPage() {
             </div>
           ))}
         </div>
+
+        <div className="card">
+          <div className="card-title">Incident Hotspots</div>
+          <div className="bar-chart">
+            {hotspots.length === 0 ? (
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--textMuted)', fontSize: 13 }}>No hotspot data</div>
+            ) : (
+              hotspots.map(h => (
+                <div key={h.zone} className="bar-row">
+                  <span className="bar-label">{h.zone}</span>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{
+                      width: `${Math.min(h.incident_count / Math.max(...hotspots.map(x => x.incident_count), 1) * 100, 100)}%`,
+                      background: 'linear-gradient(90deg, var(--accent), var(--accentEnd))',
+                    }} />
+                  </div>
+                  <span className="bar-value">{h.incident_count}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
+
+      {equity.length > 0 && (
+        <div className="card" style={{ marginTop: 20 }}>
+          <div className="card-title">Equity Metrics — Avg Resolution Time by Zone</div>
+          <div className="bar-chart">
+            {equity.map(e => (
+              <div key={e.zone} className="bar-row">
+                <span className="bar-label">{e.zone}</span>
+                <div className="bar-track">
+                  <div className="bar-fill" style={{
+                    width: `${Math.min(e.avg_resolution_time_minutes / Math.max(...equity.map(x => x.avg_resolution_time_minutes), 1) * 100, 100)}%`,
+                    background: 'linear-gradient(90deg, var(--accent), var(--accentEnd))',
+                  }} />
+                </div>
+                <span className="bar-value">{Math.round(e.avg_resolution_time_minutes)}m</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
