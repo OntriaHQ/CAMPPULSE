@@ -65,20 +65,20 @@ export default function GuestHome() {
         attributionControl: false,
       });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 20, subdomains: 'abcd',
       }).addTo(map);
 
       INCIDENTS.forEach(inc => {
         const el = document.createElement('div');
-        el.style.cssText = `width:22px;height:22px;border-radius:50%;background:${SEV[inc.type].color};border:2.5px solid rgba(255,255,255,0.85);box-shadow:0 0 10px ${SEV[inc.type].color}`;
+        el.style.cssText = `width:22px;height:22px;border-radius:50%;background:${SEV[inc.type].color};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35),0 0 0 4px ${SEV[inc.type].color}33`;
         const icon = L.divIcon({ html: el.outerHTML, className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
         L.marker([inc.lat, inc.lng], { icon }).bindPopup(`<b>${inc.label}</b><br>${inc.area}`).addTo(map);
       });
 
       const userEl = document.createElement('div');
-      userEl.style.cssText = 'width:14px;height:14px;border-radius:50%;background:#0EA5E9;border:3px solid #fff;box-shadow:0 0 0 6px rgba(14,165,233,0.2)';
-      const userIcon = L.divIcon({ html: userEl.outerHTML, className: '', iconSize: [14, 14], iconAnchor: [7, 7] });
+      userEl.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#0EA5E9;border:3px solid #fff;box-shadow:0 2px 8px rgba(14,165,233,0.55),0 0 0 6px rgba(14,165,233,0.18)';
+      const userIcon = L.divIcon({ html: userEl.outerHTML, className: '', iconSize: [16, 16], iconAnchor: [8, 8] });
       L.marker([CAMP_LAT, CAMP_LNG], { icon: userIcon }).addTo(map);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -112,13 +112,13 @@ export default function GuestHome() {
     if (routeLineRef.current)  { map.removeLayer(routeLineRef.current);  }
 
     const dEl = document.createElement('div');
-    dEl.style.cssText = 'width:28px;height:28px;border-radius:50%;background:#00C896;border:3px solid #fff;box-shadow:0 0 0 8px rgba(0,200,150,0.25),0 0 20px rgba(0,200,150,0.5)';
+    dEl.style.cssText = 'width:28px;height:28px;border-radius:50%;background:#00C896;border:3px solid #fff;box-shadow:0 2px 12px rgba(0,200,150,0.6),0 0 0 6px rgba(0,200,150,0.20)';
     const dIcon = L.divIcon({ html: dEl.outerHTML, className: '', iconSize: [28, 28], iconAnchor: [14, 14] });
     destMarkerRef.current = L.marker([dest.lat, dest.lng], { icon: dIcon })
       .bindPopup(`<b>${dest.name}</b><br>${dest.area}`)
       .addTo(map);
     routeLineRef.current = L.polyline([[CAMP_LAT, CAMP_LNG], [dest.lat, dest.lng]], {
-      color: '#00C896', weight: 3, dashArray: '8,6', opacity: 0.75,
+      color: '#00C896', weight: 4, dashArray: '10,7', opacity: 0.85,
     }).addTo(map);
     map.fitBounds([[CAMP_LAT, CAMP_LNG], [dest.lat, dest.lng]], { padding: [80, 80] });
   }
