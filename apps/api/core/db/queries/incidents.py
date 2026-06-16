@@ -106,7 +106,8 @@ async def get_incident_detail(
                 i.department, i.upvote_count, i.is_duplicate,
                 i.created_at, i.updated_at, i.resolved_at,
                 u.full_name AS reporter_name,
-                a.full_name AS assignee_name
+                a.full_name AS assignee_name,
+                i.assigned_to
             FROM incidents i
             LEFT JOIN users u ON u.id = i.reporter_id
             LEFT JOIN users a ON a.id = i.assigned_to
@@ -291,7 +292,7 @@ async def get_incident_status(
     session: AsyncSession,
 ) -> Any:
     result = await session.execute(
-        text("SELECT id, status FROM incidents WHERE id = :id"),
+        text("SELECT id, status, reporter_id FROM incidents WHERE id = :id"),
         {"id": incident_id},
     )
     return result.fetchone()

@@ -12,8 +12,9 @@ from gateway.config import settings
 from core.models import Base
 from services.auth.models import AuthSession  # noqa: F401
 from services.incident.models import CampZone, Incident, IncidentComment, IncidentUpvote  # noqa: F401
+from services.notification.models import NotificationLog  # noqa: F401
 from services.routing.models import RoadSegment  # noqa: F401
-from services.user.models import User  # noqa: F401
+from services.user.models import DriverProfile, User  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

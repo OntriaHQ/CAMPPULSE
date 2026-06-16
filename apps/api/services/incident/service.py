@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +28,12 @@ from services.incident.duplicate import (
     increment_parent_upvote,
     link_reporter_to_parent,
 )
-from services.incident.publisher import publish_incident_created, publish_incident_status_changed
+from core.db.queries.drivers import find_nearest_available_drivers, mark_driver_availability
+from services.incident.publisher import (
+    publish_incident_created,
+    publish_incident_resolved,
+    publish_incident_status_changed,
+)
 from services.incident.routing import (
     estimate_response_window,
     is_valid_transition,
@@ -43,6 +49,10 @@ from services.incident.schemas import (
     UpvoteResponse,
 )
 from services.incident.storage import upload_photo
+from services.routing.service import calculate_route as get_route
+from services.routing.schemas import RouteCalculateRequest, RoutePoint
+
+logger = logging.getLogger(__name__)
 
 
 async def check_boundary(lat: float, lon: float) -> bool:
@@ -118,9 +128,19 @@ async def create_incident(
         location={"lat": data.lat, "lon": data.lon},
         severity=data.severity,
         zone=zone,
+        reporter_id=str(reporter_id) if reporter_id else None,
     )
 
     window = estimate_response_window(data.severity, department)
+
+    dispatch_info = None
+    if data.severity == "critical" and reporter_id is not None:
+        dispatch_info = await dispatch_critical_incident(
+            incident_id=incident_id,
+            lat=data.lat,
+            lon=data.lon,
+            session=session,
+        )
 
     return IncidentCreateResponse(
         incident_id=incident_id,
@@ -129,6 +149,7 @@ async def create_incident(
         department=row["department"],
         photo_url=photo_url,
         estimated_response_window=window,
+        dispatch=dispatch_info,
     )
 
 
@@ -292,6 +313,66 @@ async def add_comment(
     }
 
 
+async def dispatch_critical_incident(
+    incident_id: str,
+    lat: float,
+    lon: float,
+    session: AsyncSession,
+) -> dict:
+    """Find and assign the nearest available driver for a critical incident."""
+    for radius in (2000, 5000):
+        drivers = await find_nearest_available_drivers(lon, lat, radius, 5, session)
+        if not drivers:
+            continue
+
+        best = drivers[0]
+        driver_user_id = best[0]
+        distance = float(best[3])
+
+        # Calculate actual route and ETA
+        try:
+            from core.redis import get_redis
+            redis_client = get_redis()
+            
+            route_req = RouteCalculateRequest(
+                origin=RoutePoint(lat=float(best[4]), lon=float(best[5])),
+                destination=RoutePoint(lat=lat, lon=lon),
+                mode="tricycle" if best[2] == "tricycle" else "walking"
+            )
+            route_res = await get_route(route_req, redis_client, session)
+            polyline = route_res.polyline
+            eta_seconds = route_res.duration_seconds
+        except Exception as e:
+            logger.warning("Failed to calculate dispatch route: %s", e)
+            polyline = None
+            eta_seconds = int(distance / 1.5)  # fallback estimate
+
+        await update_assignment_sql(
+            uuid.UUID(incident_id),
+            driver_user_id,
+            "emergency",
+            session,
+        )
+        await mark_driver_availability(driver_user_id, False, session)
+        await session.commit()
+
+        return {
+            "dispatched": True,
+            "driver_id": str(driver_user_id),
+            "driver_name": best[1],
+            "vehicle_type": best[2],
+            "distance_metres": distance,
+            "eta_seconds": eta_seconds,
+            "encoded_polyline": polyline,
+        }
+
+    return {
+        "dispatched": False,
+        "driver_id": None,
+        "message": "No available drivers found within 5 km.",
+    }
+
+
 async def update_incident_status(
     incident_id: uuid.UUID,
     new_status: str,
@@ -311,11 +392,26 @@ async def update_incident_status(
         )
 
     await update_status_sql(incident_id, new_status, session)
+
+    if new_status == "resolved":
+        incident = await get_incident_detail(incident_id, session)
+        if incident:
+            await publish_incident_resolved(
+                incident_id=str(incident_id),
+                incident_type=incident[1],
+                location={"lat": float(incident[4]), "lon": float(incident[5])},
+                zone=incident[7],
+            )
+            assigned_to = incident[18]
+            if assigned_to is not None:
+                await mark_driver_availability(assigned_to, True, session)
+
     await session.commit()
 
     await publish_incident_status_changed(
         incident_id=str(incident_id),
         status=new_status,
+        reporter_id=str(row[2]) if row[2] else None,
         note=note,
     )
 

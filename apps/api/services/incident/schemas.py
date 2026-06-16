@@ -31,6 +31,7 @@ class IncidentCreateResponse(BaseModel):
     photo_url: str | None = None
     estimated_response_window: str | None = None
     message: str | None = None
+    dispatch: dict | None = None
 
 
 class CommentCreate(BaseModel):

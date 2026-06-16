@@ -90,6 +90,19 @@ class ConnectionManager:
         for ws in dead:
             self.disconnect(ws)
 
+    async def send_to_user(self, user_id: str, message: dict[str, Any]) -> None:
+        """Sends a message to all active WebSocket connections for a specific user."""
+        raw = json.dumps(message)
+        dead: list[WebSocket] = []
+        for ws, uid in list(self._ws_user.items()):
+            if uid == user_id:
+                try:
+                    await ws.send_text(raw)
+                except Exception:
+                    dead.append(ws)
+        for ws in dead:
+            self.disconnect(ws)
+
 
 # Module-level singleton — imported by congestion subscriber
 connection_manager = ConnectionManager()

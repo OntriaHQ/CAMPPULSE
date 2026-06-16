@@ -22,6 +22,7 @@ from services.auth.router import router as auth_router
 from services.congestion.hotspot_scheduler import HotspotScheduler
 from services.congestion.subscriber import CongestionSubscriber
 from services.incident.router import router as incident_router
+from services.notification.subscriber import NotificationSubscriber
 from services.realtime.router import router as realtime_router
 from services.routing.router import router as routing_router
 from services.routing.subscriber import RoutingSubscriber
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 _routing_subscriber: RoutingSubscriber | None = None
 _congestion_subscriber: CongestionSubscriber | None = None
+_notification_subscriber: NotificationSubscriber | None = None
 _hotspot_scheduler: HotspotScheduler | None = None
 
 
@@ -66,10 +68,17 @@ async def lifespan(app: FastAPI):
     )
     await _hotspot_scheduler.start()
 
+    # M6: Notification subscriber
+    global _notification_subscriber
+    _notification_subscriber = NotificationSubscriber(redis_client, session_factory)
+    await _notification_subscriber.start()
+
     yield
 
     if _hotspot_scheduler:
         await _hotspot_scheduler.stop()
+    if _notification_subscriber:
+        await _notification_subscriber.stop()
     if _congestion_subscriber:
         await _congestion_subscriber.stop()
     if _routing_subscriber:
