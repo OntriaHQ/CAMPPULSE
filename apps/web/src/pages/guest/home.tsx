@@ -43,7 +43,7 @@ export default function GuestHome() {
   const [searchQuery,  setSearchQuery]  = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [destination,  setDestination]  = useState<Destination | null>(null);
-  const [panelOpen,    setPanelOpen]    = useState(true);
+  const [panelOpen,    setPanelOpen]    = useState(false);
 
   useEffect(() => {
     if (!document.getElementById('leaflet-css')) {
