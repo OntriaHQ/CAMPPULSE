@@ -1,12 +1,13 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 interface User { id: string; email: string; full_name: string; role: string; kyc_status: string; }
 
 interface AuthCtx {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -14,22 +15,24 @@ const Ctx = createContext<AuthCtx | null>(null);
 
 const API       = import.meta.env.VITE_API_URL ?? 'http://localhost:8000';
 const TOKEN_KEY = 'cp_admin_token';
+const REFRESH_KEY = 'cp_admin_refresh';
 const USER_KEY  = 'cp_admin_user';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user,  setUser]  = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [user,         setUser]         = useState<User | null>(null);
+  const [token,        setToken]        = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
 
   useEffect(() => {
     const t = localStorage.getItem(TOKEN_KEY);
+    const r = localStorage.getItem(REFRESH_KEY);
     const u = localStorage.getItem(USER_KEY);
-    if (t && u) {
-      try { setToken(t); setUser(JSON.parse(u)); } catch {}
+    if (t && r && u) {
+      try { setToken(t); setRefreshToken(r); setUser(JSON.parse(u)); } catch {}
     }
   }, []);
 
   async function login(email: string, password: string) {
-    // 1. Exchange credentials for tokens
     const res = await fetch(`${API}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -42,10 +45,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     const body = await res.json();
-    // Response shape: { success, data: { user: {...}, tokens: { access_token, ... } }, meta }
     const data = body?.data;
     const accessToken: string = data?.tokens?.access_token;
-    if (!accessToken) throw new Error('No access token in response');
+    const refToken: string = data?.tokens?.refresh_token;
+    if (!accessToken || !refToken) throw new Error('No tokens in response');
 
     const profile = data?.user;
     const userObj: User = {
@@ -57,20 +60,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     localStorage.setItem(TOKEN_KEY, accessToken);
+    localStorage.setItem(REFRESH_KEY, refToken);
     localStorage.setItem(USER_KEY, JSON.stringify(userObj));
     setToken(accessToken);
+    setRefreshToken(refToken);
     setUser(userObj);
   }
 
-  function logout() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    setToken(null);
-    setUser(null);
-  }
+  const logout = useCallback(async () => {
+    try {
+      const tok = localStorage.getItem(TOKEN_KEY);
+      if (tok) {
+        await fetch(`${API}/api/v1/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${tok}` },
+        });
+      }
+    } catch {
+    } finally {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_KEY);
+      localStorage.removeItem(USER_KEY);
+      setToken(null);
+      setRefreshToken(null);
+      setUser(null);
+    }
+  }, []);
 
   return (
-    <Ctx.Provider value={{ user, token, login, logout, isAuthenticated: !!token }}>
+    <Ctx.Provider value={{ user, token, refreshToken, login, logout, isAuthenticated: !!token }}>
       {children}
     </Ctx.Provider>
   );

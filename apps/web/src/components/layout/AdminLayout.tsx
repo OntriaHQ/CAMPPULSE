@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { LayoutDashboard, FileText, Map, BarChart2, Megaphone, Users, Bell, Settings, CalendarDays, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const NAV = [
   { to: '/admin',           label: 'Overview',      Icon: LayoutDashboard, exact: true },
-  { to: '/admin/incidents', label: 'Reports',        Icon: FileText,        badge: '8'  },
+  { to: '/admin/incidents', label: 'Reports',        Icon: FileText,        badgeKey: 'open_incidents' as const },
   { to: '/admin/map',       label: 'Camp Map',       Icon: Map                          },
   { to: '/admin/analytics', label: 'Analytics',      Icon: BarChart2                    },
   { to: '/admin/events',    label: 'Events',         Icon: CalendarDays                 },
@@ -19,6 +20,20 @@ export function AdminLayout({ title, subtitle, children }: Props) {
   const { user, logout } = useAuth();
   const { theme, toggle } = useTheme();
   const navigate = useNavigate();
+  const [badgeCount, setBadgeCount] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('cp_admin_token');
+    if (!token) return;
+    fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/graphql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ query: '{ dashboardSummary { open_incidents } }' }),
+    })
+      .then(r => r.json())
+      .then(d => { if (d?.data?.dashboardSummary?.open_incidents != null) setBadgeCount(String(d.data.dashboardSummary.open_incidents)); })
+      .catch(() => {});
+  }, []);
 
   function handleLogout() {
     logout();
@@ -51,7 +66,7 @@ export function AdminLayout({ title, subtitle, children }: Props) {
               >
                 <item.Icon size={16} style={{ flexShrink: 0 }} />
                 {item.label}
-                {item.badge && <span className="nav-badge">{item.badge}</span>}
+                {item.badgeKey && badgeCount && <span className="nav-badge">{badgeCount}</span>}
               </NavLink>
             ))}
           </nav>

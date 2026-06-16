@@ -44,9 +44,12 @@ async def client():
 
 
 @pytest_asyncio.fixture(autouse=True)
-async def clean_auth_tables(client):
+async def clean_tables(client):
     factory = get_session_factory()
     async with factory() as session:
+        await session.execute(text("DELETE FROM incident_comments"))
+        await session.execute(text("DELETE FROM incident_upvotes"))
+        await session.execute(text("DELETE FROM incidents"))
         await session.execute(text("DELETE FROM auth_sessions"))
         await session.execute(text("DELETE FROM users"))
         await session.commit()

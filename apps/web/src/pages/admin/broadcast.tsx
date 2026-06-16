@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
+import { gqlSendZoneBroadcast } from '../../services/admin';
 
 const AREAS = [
   { id: 'auditorium',    label: 'Auditorium Area',  count: 12 },
@@ -11,28 +12,28 @@ const AREAS = [
   { id: 'all',           label: 'All Areas',         count: 0  },
 ];
 
-const HISTORY = [
-  {
-    areas: 'North Gate · Camp Road',
-    priority: 'high',
-    msg: 'Heavy congestion at the main gate. Please use the South entrance as an alternative. Camp buses are available at the Festival Arena.',
-    by: 'Camp Management', ago: '2h ago',
-  },
-  {
-    areas: 'All Areas',
-    priority: 'medium',
-    msg: 'Water supply has been restored across Canaan Land Estate. Thank you for your patience.',
-    by: 'Infrastructure Team', ago: '5h ago',
-  },
-  {
-    areas: 'Festival Arena',
-    priority: 'low',
-    msg: 'Pathway lighting along the east section of the Festival Arena will be restored by 8pm. Please carry a torch if moving through that area.',
-    by: 'Camp Management', ago: 'Yesterday',
-  },
-];
+interface HistoryItem {
+  id: string;
+  areas: string;
+  priority: string;
+  msg: string;
+  by: string;
+  ago: string;
+  created_at: string;
+}
 
 const PRIORITY_CLASS: Record<string, string> = { critical: 'pill-critical', high: 'pill-high', medium: 'pill-medium', low: 'pill-low' };
+const STORAGE_KEY = 'cp_broadcast_history';
+
+function loadHistory(): HistoryItem[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  } catch { return []; }
+}
+
+function saveHistory(items: HistoryItem[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, 20)));
+}
 
 export default function AdminBroadcastPage() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -40,6 +41,8 @@ export default function AdminBroadcastPage() {
   const [message,  setMessage]  = useState('');
   const [sending,  setSending]  = useState(false);
   const [sent,     setSent]     = useState(false);
+  const [apiError, setApiError] = useState('');
+  const [history,  setHistory]  = useState<HistoryItem[]>(loadHistory);
 
   function toggle(id: string) {
     if (id === 'all') {
@@ -54,21 +57,44 @@ export default function AdminBroadcastPage() {
   async function handleSend() {
     if (!selected.length || !message.trim()) return;
     setSending(true);
-    await new Promise(r => setTimeout(r, 1200));
-    setSending(false);
-    setSent(true);
-    setMessage('');
-    setSelected([]);
-    setTimeout(() => setSent(false), 3000);
+    setApiError('');
+
+    try {
+      const zone = selected.includes('all') ? 'all' : selected.map(id => AREAS.find(a => a.id === id)?.label ?? id).join(',');
+      const title = `[${priority.toUpperCase()}] Announcement`;
+      const result = await gqlSendZoneBroadcast(zone, title, message);
+
+      const item: HistoryItem = {
+        id: result.id ?? Date.now().toString(),
+        areas: zone,
+        priority,
+        msg: message,
+        by: 'Camp Management',
+        ago: 'Just now',
+        created_at: new Date().toISOString(),
+      };
+      const updated = [item, ...history];
+      setHistory(updated);
+      saveHistory(updated);
+      setSent(true);
+      setMessage('');
+      setSelected([]);
+      setTimeout(() => setSent(false), 3000);
+    } catch (e: any) {
+      setApiError(e.message);
+    } finally {
+      setSending(false);
+    }
   }
 
   const selectedLabels = AREAS.filter(a => selected.includes(a.id)).map(a => a.label).join(', ');
 
   return (
     <AdminLayout title="Announcements" subtitle="Send messages to residents and visitors">
+      {apiError && <div style={{ padding: 12, marginBottom: 16, background: 'rgba(239,68,68,0.12)', borderRadius: 10, color: '#EF4444', fontSize: 13 }}>{apiError}</div>}
+
       <div className="grid-2">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          {/* Area selector */}
           <div className="card">
             <div className="card-title">Target Area</div>
             <div className="zone-checkboxes">
@@ -82,7 +108,6 @@ export default function AdminBroadcastPage() {
             </div>
           </div>
 
-          {/* Priority */}
           <div className="card">
             <div className="card-title">Priority</div>
             <div style={{ display: 'flex', gap: 8 }}>
@@ -101,7 +126,6 @@ export default function AdminBroadcastPage() {
             </div>
           </div>
 
-          {/* Message */}
           <div className="card">
             <div className="card-title">Message</div>
             <div className="input-group">
@@ -124,19 +148,22 @@ export default function AdminBroadcastPage() {
           </div>
         </div>
 
-        {/* History */}
         <div className="card" style={{ height: 'fit-content' }}>
           <div className="card-title">Recent Announcements</div>
-          {HISTORY.map((h, i) => (
-            <div key={i} className="broadcast-item">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span className="broadcast-zones">{h.areas}</span>
-                <span className={`pill ${PRIORITY_CLASS[h.priority]}`} style={{ fontSize: 10 }}>{h.priority}</span>
+          {history.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', color: 'var(--textMuted)', fontSize: 13 }}>No announcements yet</div>
+          ) : (
+            history.map(h => (
+              <div key={h.id} className="broadcast-item">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="broadcast-zones">{h.areas}</span>
+                  <span className={`pill ${PRIORITY_CLASS[h.priority]}`} style={{ fontSize: 10 }}>{h.priority}</span>
+                </div>
+                <div className="broadcast-msg">{h.msg}</div>
+                <div className="broadcast-meta">{h.by} · {h.ago}</div>
               </div>
-              <div className="broadcast-msg">{h.msg}</div>
-              <div className="broadcast-meta">{h.by} · {h.ago}</div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </AdminLayout>

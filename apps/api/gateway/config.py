@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 7
     environment: str = "development"
 
+    mapbox_token: str = ""
+    openroute_service_api_key: str = ""
+
+    # M4: Congestion detection settings
+    congestion_threshold: int = 50
+    congestion_window_seconds: int = 90
+    congestion_revalidation_seconds: int = 60
+    hotspots_path: str = ""  # Defaults to packages/map-config/src/hotspots.json in hotspot_scheduler
+
     rate_limit_guest: int = 60
     rate_limit_resident: int = 300
     rate_limit_driver: int = 300
