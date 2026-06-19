@@ -18,4 +18,3 @@ aioboto3>=13.1.0
 aiohttp>=3.9.0
 websockets>=12.0
 strawberry-graphql[fastapi]>=0.237.0
-strawberry-graphql>=0.237.0
