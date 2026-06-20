@@ -75,10 +75,16 @@ async def record_route_request(
 
 async def invalidate_route_cache(
     redis_client: redis.Redis,
+    zone: str | None = None,
+    reason: str = "",
 ) -> int:
     count = 0
     async for key in redis_client.scan_iter(match="route:*"):
         if not key.startswith(("route:freq:", "route:offline:")):
             await redis_client.delete(key)
             count += 1
+
+    from services.routing.publisher import publish_cache_invalidated
+    await publish_cache_invalidated(redis_client, zone=zone, reason=reason)
+
     return count

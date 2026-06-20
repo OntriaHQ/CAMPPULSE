@@ -145,6 +145,13 @@ export default function NavPage() {
             }}>Navigator</span>
           </div>
 
+          <a href="/nav/qr" style={{
+            padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+            background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.3)',
+            color: '#06b6d4', textDecoration: 'none', fontFamily: 'inherit',
+            whiteSpace: 'nowrap',
+          }}>QR Codes</a>
+
           <div style={{
             flex: 1, maxWidth: 400,
             display: 'flex', gap: 8,

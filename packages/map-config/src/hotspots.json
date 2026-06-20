@@ -5,7 +5,55 @@
       "name": "Main Auditorium",
       "zone_id": "zone-a",
       "coordinates": { "lat": 6.9271, "lon": 3.3958 },
-      "schedule": []
+      "schedule": [
+        { "day": "Monday", "start_time": "06:00", "end_time": "08:00" },
+        { "day": "Tuesday", "start_time": "06:00", "end_time": "08:00" },
+        { "day": "Wednesday", "start_time": "06:00", "end_time": "08:00" },
+        { "day": "Thursday", "start_time": "06:00", "end_time": "08:00" },
+        { "day": "Friday", "start_time": "06:00", "end_time": "08:00" },
+        { "day": "Friday", "start_time": "19:00", "end_time": "23:59" }
+      ]
+    },
+    {
+      "id": "north-gate",
+      "name": "North Gate",
+      "zone_id": "zone-b",
+      "coordinates": { "lat": 6.9300, "lon": 3.3930 },
+      "schedule": [
+        { "day": "Friday", "start_time": "17:00", "end_time": "22:00" },
+        { "day": "Saturday", "start_time": "08:00", "end_time": "20:00" },
+        { "day": "Sunday", "start_time": "06:00", "end_time": "14:00" }
+      ]
+    },
+    {
+      "id": "festival-arena",
+      "name": "Festival Arena",
+      "zone_id": "zone-b",
+      "coordinates": { "lat": 6.9250, "lon": 3.4000 },
+      "schedule": [
+        { "day": "Saturday", "start_time": "09:00", "end_time": "16:00" },
+        { "day": "Sunday", "start_time": "08:00", "end_time": "12:00" }
+      ]
+    },
+    {
+      "id": "canaan-land",
+      "name": "Canaan Land",
+      "zone_id": "zone-a",
+      "coordinates": { "lat": 6.9200, "lon": 3.3900 },
+      "schedule": [
+        { "day": "Sunday", "start_time": "10:00", "end_time": "13:00" }
+      ]
+    },
+    {
+      "id": "camp-road",
+      "name": "Camp Road",
+      "zone_id": "zone-b",
+      "coordinates": { "lat": 6.9280, "lon": 3.3960 },
+      "schedule": [
+        { "day": "Friday", "start_time": "06:00", "end_time": "23:59" },
+        { "day": "Saturday", "start_time": "06:00", "end_time": "23:59" },
+        { "day": "Sunday", "start_time": "06:00", "end_time": "20:00" }
+      ]
     }
   ]
 }

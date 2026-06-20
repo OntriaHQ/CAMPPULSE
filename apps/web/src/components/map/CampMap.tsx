@@ -25,6 +25,13 @@ export interface MapLine {
 interface Props {
   markers?: MapMarker[];
   lines?: MapLine[];
+  boundary?: { coordinates: [number, number][][] } | null;
+  zones?: Array<{
+    id: string;
+    name: string;
+    coordinates: [number, number][][];
+    color?: string;
+  }>;
   onMapClick?: (lat: number, lng: number) => void;
   onMarkerClick?: (marker: MapMarker) => void;
   interactive?: boolean;
@@ -36,6 +43,8 @@ const DEFAULT_STYLE = 'mapbox://styles/mapbox/dark-v11';
 export default function CampMap({
   markers = [],
   lines = [],
+  boundary,
+  zones,
   onMapClick,
   onMarkerClick,
   interactive = true,
@@ -165,6 +174,103 @@ export default function CampMap({
       });
     });
   }, [lines, loaded]);
+
+  // Render camp boundary
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || !boundary) return;
+
+    const srcId = 'camp-boundary';
+    const layerId = 'camp-boundary-fill';
+    const outlineId = 'camp-boundary-outline';
+
+    if (map.getLayer(outlineId)) map.removeLayer(outlineId);
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+    if (map.getSource(srcId)) map.removeSource(srcId);
+
+    map.addSource(srcId, {
+      type: 'geojson',
+      data: {
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: boundary.coordinates,
+        },
+      },
+    });
+
+    map.addLayer({
+      id: layerId,
+      type: 'fill',
+      source: srcId,
+      paint: {
+        'fill-color': '#6366f1',
+        'fill-opacity': 0.06,
+      },
+    });
+
+    map.addLayer({
+      id: outlineId,
+      type: 'line',
+      source: srcId,
+      paint: {
+        'line-color': '#6366f1',
+        'line-width': 2,
+        'line-dasharray': [4, 4],
+        'line-opacity': 0.5,
+      },
+    });
+  }, [boundary, loaded]);
+
+  // Render zone polygons
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || !zones?.length) return;
+
+    ['zone-fill', 'zone-outline'].forEach(lid => {
+      if (map.getLayer(lid)) map.removeLayer(lid);
+    });
+    ['zone-source'].forEach(sid => {
+      if (map.getSource(sid)) map.removeSource(sid);
+    });
+
+    const features = zones.map(z => ({
+      type: 'Feature' as const,
+      properties: { name: z.name, color: z.color ?? '#6366f1' },
+      geometry: {
+        type: 'Polygon' as const,
+        coordinates: z.coordinates,
+      },
+    }));
+
+    map.addSource('zone-source', {
+      type: 'geojson',
+      data: { type: 'FeatureCollection', features },
+    });
+
+    map.addLayer({
+      id: 'zone-fill',
+      type: 'fill',
+      source: 'zone-source',
+      paint: {
+        'fill-color': ['get', 'color'],
+        'fill-opacity': 0.04,
+      },
+    });
+
+    map.addLayer({
+      id: 'zone-outline',
+      type: 'line',
+      source: 'zone-source',
+      paint: {
+        'line-color': ['get', 'color'],
+        'line-width': 1,
+        'line-dasharray': [2, 3],
+        'line-opacity': 0.35,
+      },
+    });
+  }, [zones, loaded]);
 
   if (error) {
     return (

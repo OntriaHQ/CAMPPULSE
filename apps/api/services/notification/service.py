@@ -1,9 +1,10 @@
 import logging
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.queries.notifications import insert_notification_log
-from services.realtime.router import connection_manager
+from core.connection_manager import connection_manager
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +81,47 @@ async def send_push_notification(
     body: str,
     data: dict | None = None,
 ) -> None:
-    """Send a push notification via Expo Push API.
+    """Send a push notification via Expo Push API."""
+    if user_id == "*":
+        return
 
-    Note: This is a placeholder implementation using httpx.
-    In production, this would use expo-server-sdk-python.
-    """
+    from sqlalchemy import text
+    result = await session.execute(
+        text("SELECT push_token FROM users WHERE id = :user_id AND push_token IS NOT NULL"),
+        {"user_id": user_id},
+    )
+    row = result.fetchone()
+    if not row:
+        logger.info("No push token found for user %s, skipping push notification", user_id)
+        return
+
+    push_token = row[0]
+
+    message = {
+        "to": push_token,
+        "sound": "default",
+        "title": title,
+        "body": body,
+        "data": data or {},
+        "priority": "high",
+    }
+
+    delivered = False
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=message,
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+            )
+            if response.status_code == 200:
+                delivered = True
+                logger.info("Push notification sent to %s: %s", user_id, title)
+            else:
+                logger.warning("Expo API returned %s: %s", response.status_code, response.text)
+    except Exception:
+        logger.exception("Failed to send push notification to %s", user_id)
+
     await log_notification(
         session=session,
         user_id=user_id,
@@ -92,10 +129,8 @@ async def send_push_notification(
         title=title,
         body=body,
         channel="push",
-        delivered=True,  # Assuming successful handoff to Expo
+        delivered=delivered,
     )
-    # Placeholder for actual HTTP call to Expo
-    logger.info("Push notification sent to %s: %s", user_id, title)
 
 
 async def send_zone_broadcast(

@@ -165,7 +165,7 @@ class CongestionSubscriber(BaseSubscriber):
 async def _broadcast_zone_alert(zone: str, severity: str, ping_count: int) -> None:
     """Fan-out zone_alert to the given zone and to _unzoned (guest) connections."""
     try:
-        from services.realtime.router import connection_manager
+        from core.connection_manager import connection_manager
         await connection_manager.broadcast_to_zone(zone, {
             "type": "zone_alert",
             "payload": {
@@ -191,7 +191,7 @@ async def _broadcast_zone_alert(zone: str, severity: str, ping_count: int) -> No
 async def _broadcast_zone_clearing(zone: str) -> None:
     """Fan-out zone_clearing to the given zone and to _unzoned (guest) connections."""
     try:
-        from services.realtime.router import connection_manager
+        from core.connection_manager import connection_manager
         await connection_manager.broadcast_to_zone(zone, {
             "type": "zone_clearing",
             "payload": {

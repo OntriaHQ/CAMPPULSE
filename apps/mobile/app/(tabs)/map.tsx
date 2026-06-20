@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Platform,
@@ -18,16 +18,15 @@ import type WebViewType from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { Fonts, GradientColors, Radius } from '@/constants/theme';
 import { useTheme, useColors } from '@/context/ThemeContext';
+import { getIncidentsNearby } from '../../services/incidents';
+import { calculateRoute } from '../../services/routes';
+import { wsManager } from '../../services/websocket';
+import { useLocation } from '../../hooks/useLocation';
 
 const CAMP_LAT = 6.7617;
 const CAMP_LNG = 3.6664;
-
-const INCIDENTS = [
-  { id: '1', lat: 6.7635, lng: 3.6650, type: 'critical', label: 'Flooding',         area: 'Camp Road',      time: '2h ago'    },
-  { id: '2', lat: 6.7650, lng: 3.6680, type: 'high',     label: 'Crowd Congestion', area: 'North Gate',     time: '5h ago'    },
-  { id: '3', lat: 6.7600, lng: 3.6700, type: 'medium',   label: 'Streetlight Out',  area: 'Festival Arena', time: 'Yesterday' },
-  { id: '4', lat: 6.7580, lng: 3.6640, type: 'low',      label: 'Water Supply',     area: 'Canaan Land',    time: '3d ago'    },
-];
+const WS_GUEST_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000')
+  .replace(/^http/, 'ws') + '/ws/location/guest';
 
 const SEV_COLOR: Record<string, string> = {
   critical: '#EF4444',
@@ -35,6 +34,16 @@ const SEV_COLOR: Record<string, string> = {
   medium:   '#EAB308',
   low:      '#22C55E',
 };
+
+interface IncidentData {
+  id: string;
+  lat: number;
+  lng: number;
+  type: string;
+  label: string;
+  area: string;
+  time: string;
+}
 
 interface Destination {
   id: string;
@@ -57,7 +66,19 @@ const DESTINATIONS: Destination[] = [
   { id: 'd10', name: 'Prayer Mountain',    area: 'Mountain Zone',    lat: 6.7560, lng: 3.6630 },
 ];
 
-const mapHtml = `<!DOCTYPE html>
+function buildMapHtml(
+  incidents: IncidentData[],
+  userLat: number,
+  userLng: number,
+  dest: { lat: number; lng: number } | null,
+  routeCoords: { lat: number; lng: number }[],
+  zAlert: { zone: string; severity: string } | null,
+) {
+  const routeGeoJson = routeCoords.length > 0
+    ? JSON.stringify(routeCoords.map(c => [c.lng, c.lat]))
+    : 'null';
+
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -70,21 +91,23 @@ const mapHtml = `<!DOCTYPE html>
     .pin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); }
     .user { width: 14px; height: 14px; border-radius: 50%; background:#0EA5E9; border:3px solid #fff; box-shadow:0 0 0 6px rgba(14,165,233,0.2); }
     .dest { width: 28px; height: 28px; border-radius: 50%; background:#00C896; border:3px solid #fff; box-shadow:0 0 0 8px rgba(0,200,150,0.25), 0 0 20px rgba(0,200,150,0.5); }
+    .alert-marker { width: 40px; height: 40px; border-radius: 50%; border: 3px solid #EF4444; background: rgba(239,68,68,0.15); animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.6; } 100% { transform: scale(1); opacity: 1; } }
   </style>
 </head>
 <body><div id="map"></div>
 <script>
-  const map = L.map('map',{center:[${CAMP_LAT},${CAMP_LNG}],zoom:15,zoomControl:false,attributionControl:false});
+  const map = L.map('map',{center:[${userLat},${userLng}],zoom:15,zoomControl:false,attributionControl:false});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
 
-  const incidents = ${JSON.stringify(INCIDENTS)};
+  const incidents = ${JSON.stringify(incidents)};
   const colors = ${JSON.stringify(SEV_COLOR)};
 
   incidents.forEach(inc => {
     const el = document.createElement('div');
     el.className = 'pin';
-    el.style.background = colors[inc.type];
-    el.style.boxShadow = '0 0 10px '+colors[inc.type];
+    el.style.background = colors[inc.type] || '#888';
+    el.style.boxShadow = '0 0 10px ' + (colors[inc.type] || '#888');
     const icon = L.divIcon({html:el.outerHTML,className:'',iconSize:[22,22],iconAnchor:[11,11]});
     L.marker([inc.lat,inc.lng],{icon}).addTo(map);
   });
@@ -92,10 +115,30 @@ const mapHtml = `<!DOCTYPE html>
   const uEl = document.createElement('div');
   uEl.className='user';
   const uIcon = L.divIcon({html:uEl.outerHTML,className:'',iconSize:[14,14],iconAnchor:[7,7]});
-  L.marker([${CAMP_LAT},${CAMP_LNG}],{icon:uIcon}).addTo(map);
+  const userMarker = L.marker([${userLat},${userLng}],{icon:uIcon}).addTo(map);
 
   let destMarker = null;
   let routeLine = null;
+
+  ${dest ? `
+  const dEl = document.createElement('div');
+  dEl.className = 'dest';
+  const dIcon = L.divIcon({html:dEl.outerHTML,className:'',iconSize:[28,28],iconAnchor:[14,14]});
+  destMarker = L.marker([${dest.lat}, ${dest.lng}], {icon: dIcon}).addTo(map);
+  ` : ''}
+
+  ${routeGeoJson !== 'null' ? `
+  routeLine = L.polyline(${routeGeoJson}.map(c => [c[1], c[0]]), {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
+  map.fitBounds(routeLine.getBounds().pad(0.2));
+  ` : ''}
+
+  ${zAlert ? `
+  const aEl = document.createElement('div');
+  aEl.className = 'alert-marker';
+  const aIcon = L.divIcon({html:aEl.outerHTML,className:'',iconSize:[40,40],iconAnchor:[20,20]});
+  L.marker([${userLat + 0.005}, ${userLng + 0.005}], {icon: aIcon}).addTo(map)
+    .bindPopup('<b>Congestion: ${zAlert.zone}</b><br/>Severity: ${zAlert.severity}');
+  ` : ''}
 
   window.addEventListener('message', function(e) {
     try {
@@ -107,19 +150,25 @@ const mapHtml = `<!DOCTYPE html>
         dEl.className = 'dest';
         const dIcon = L.divIcon({html:dEl.outerHTML,className:'',iconSize:[28,28],iconAnchor:[14,14]});
         destMarker = L.marker([msg.lat, msg.lng], {icon: dIcon}).addTo(map);
-        routeLine = L.polyline([[${CAMP_LAT},${CAMP_LNG}],[msg.lat,msg.lng]], {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
-        map.fitBounds([[${CAMP_LAT},${CAMP_LNG}],[msg.lat,msg.lng]], {padding:[60,60]});
+        if (msg.polyline && msg.polyline.length > 0) {
+          routeLine = L.polyline(msg.polyline, {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
+          map.fitBounds(routeLine.getBounds().pad(0.2));
+        } else {
+          routeLine = L.polyline([[${userLat},${userLng}],[msg.lat,msg.lng]], {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
+          map.fitBounds([[${userLat},${userLng}],[msg.lat,msg.lng]], {padding:[60,60]});
+        }
       } else if (msg.type === 'clear') {
         if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
         if (routeLine)  { map.removeLayer(routeLine);  routeLine = null;  }
-        map.setView([${CAMP_LAT},${CAMP_LNG}], 15);
+        map.setView([${userLat},${userLng}], 15);
       } else if (msg.type === 'recenter') {
-        map.setView([${CAMP_LAT},${CAMP_LNG}], 15);
+        map.setView([${userLat},${userLng}], 15);
       }
     } catch(err) {}
   });
 </script>
 </body></html>`;
+}
 
 const COLLAPSED = 72;
 const EXPANDED  = 340;
@@ -137,8 +186,59 @@ export default function HomeScreen() {
   const [searchOpen,      setSearchOpen]       = useState(false);
   const [searchQuery,     setSearchQuery]      = useState('');
   const [destination,     setDestination]      = useState<Destination | null>(null);
+  const [incidents,       setIncidents]       = useState<IncidentData[]>([]);
+  const [routeCoords,     setRouteCoords]     = useState<{ lat: number; lng: number }[]>([]);
+  const [zoneAlert,       setZoneAlert]       = useState<{ zone: string; severity: string } | null>(null);
 
-  const topBarBottom = insets.top + 10 + 52; // approx top bar bottom edge
+  const { location: userLocation } = useLocation({ sendPings: false });
+
+  const userLat = userLocation?.latitude ?? CAMP_LAT;
+  const userLng = userLocation?.longitude ?? CAMP_LNG;
+
+  // Fetch incidents from API
+  const fetchIncidents = useCallback(async () => {
+    try {
+      const data = await getIncidentsNearby(userLat, userLng, 2000);
+      setIncidents(data.map(inc => ({
+        id: inc.id,
+        lat: 0, lng: 0,
+        type: inc.severity,
+        label: inc.type,
+        area: inc.address_label ?? 'Unknown',
+        time: 'Nearby',
+      })));
+    } catch {
+      // fallback: keep current incidents
+    }
+  }, [userLat, userLng]);
+
+  useEffect(() => {
+    fetchIncidents();
+    const interval = setInterval(fetchIncidents, 60000);
+    return () => clearInterval(interval);
+  }, [fetchIncidents]);
+
+  // WebSocket for real-time updates
+  useEffect(() => {
+    wsManager.connect(WS_GUEST_URL);
+
+    const unsubAlert = wsManager.on('zone_alert', (msg: any) => {
+      setZoneAlert({ zone: msg.payload?.zone, severity: msg.payload?.severity });
+      setTimeout(() => setZoneAlert(null), 10000);
+    });
+
+    const unsubClearing = wsManager.on('zone_clearing', () => {
+      setZoneAlert(null);
+    });
+
+    return () => {
+      unsubAlert();
+      unsubClearing();
+      wsManager.disconnect();
+    };
+  }, []);
+
+  const topBarBottom = insets.top + 10 + 52;
 
   function toggleSheet() {
     const toValue = sheetOpen ? COLLAPSED : EXPANDED;
@@ -158,16 +258,44 @@ export default function HomeScreen() {
     });
   }
 
-  function selectDestination(dest: Destination) {
+  async function selectDestination(dest: Destination) {
     setDestination(dest);
     closeSearch();
-    webViewRef.current?.injectJavaScript(
-      `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'navigate', lat: dest.lat, lng: dest.lng })}'})); true;`
-    );
+
+    try {
+      const route = await calculateRoute(
+        { lat: userLat, lon: userLng },
+        { lat: dest.lat, lon: dest.lng },
+        'walking',
+      );
+      if (route.polyline) {
+        import('../../services/polyline').then(mod => {
+          const coords = mod.decodePolyline(route.polyline);
+          setRouteCoords(coords);
+          webViewRef.current?.injectJavaScript(
+            `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'navigate', lat: dest.lat, lng: dest.lng, polyline: coords.map(c => [c.lat, c.lng]) })}'})); true;`
+          );
+        }).catch(() => {
+          webViewRef.current?.injectJavaScript(
+            `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'navigate', lat: dest.lat, lng: dest.lng })}'})); true;`
+          );
+        });
+      } else {
+        webViewRef.current?.injectJavaScript(
+          `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'navigate', lat: dest.lat, lng: dest.lng })}'})); true;`
+        );
+      }
+    } catch {
+      // Fallback: navigate without route
+      webViewRef.current?.injectJavaScript(
+        `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'navigate', lat: dest.lat, lng: dest.lng })}'})); true;`
+      );
+    }
   }
 
   function clearDestination() {
     setDestination(null);
+    setRouteCoords([]);
     webViewRef.current?.injectJavaScript(
       `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'clear' })}'})); true;`
     );
@@ -194,6 +322,15 @@ export default function HomeScreen() {
     ? {}
     : { backgroundColor: isDark ? 'rgba(10,10,15,0.94)' : 'rgba(244,244,249,0.97)' };
 
+  const mapHtml = buildMapHtml(
+    incidents,
+    userLat,
+    userLng,
+    destination,
+    routeCoords,
+    zoneAlert,
+  );
+
   return (
     <View style={styles.root}>
       <WebView
@@ -218,7 +355,7 @@ export default function HomeScreen() {
           <View style={styles.topRight}>
             <View style={styles.alertChip}>
               <View style={styles.alertDot} />
-              <Text style={styles.alertLabel}>{INCIDENTS.length} Active</Text>
+              <Text style={styles.alertLabel}>{incidents.length} Active</Text>
             </View>
             <TouchableOpacity
               style={[styles.iconBtn, { backgroundColor: C.glass.backgroundStrong }]}
@@ -229,6 +366,16 @@ export default function HomeScreen() {
           </View>
         </View>
       </View>
+
+      {/* Zone alert banner */}
+      {zoneAlert && (
+        <View style={[styles.alertBanner, { top: topBarBottom + 8 }]}>
+          <Ionicons name="warning" size={14} color="#fff" />
+          <Text style={styles.alertBannerText}>
+            {zoneAlert.zone} congested ({zoneAlert.severity})
+          </Text>
+        </View>
+      )}
 
       {/* Search panel */}
       {searchOpen && (
@@ -348,22 +495,28 @@ export default function HomeScreen() {
 
         {sheetOpen && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.feed}>
-            {INCIDENTS.map(inc => (
-              <View key={inc.id} style={[styles.feedCard, { backgroundColor: C.surface, borderColor: C.border }]}>
-                <View style={[styles.feedStripe, { backgroundColor: SEV_COLOR[inc.type] }]} />
-                <View style={styles.feedBody}>
-                  <View style={styles.feedRow}>
-                    <Text style={[styles.feedName, { color: C.textPrimary }]}>{inc.label}</Text>
-                    <Text style={[styles.feedTime, { color: C.textMuted }]}>{inc.time}</Text>
-                  </View>
-                  <View style={styles.feedSub}>
-                    <View style={[styles.feedDot, { backgroundColor: SEV_COLOR[inc.type] }]} />
-                    <Text style={[styles.feedArea, { color: C.textSecondary }]}>{inc.area}</Text>
-                    <Text style={[styles.feedSevText, { color: SEV_COLOR[inc.type] }]}>{inc.type}</Text>
+            {incidents.length === 0 ? (
+              <View style={{ padding: 20, alignItems: 'center' }}>
+                <Text style={{ color: C.textMuted, fontSize: 13 }}>No incidents nearby</Text>
+              </View>
+            ) : (
+              incidents.map(inc => (
+                <View key={inc.id} style={[styles.feedCard, { backgroundColor: C.surface, borderColor: C.border }]}>
+                  <View style={[styles.feedStripe, { backgroundColor: SEV_COLOR[inc.type] }]} />
+                  <View style={styles.feedBody}>
+                    <View style={styles.feedRow}>
+                      <Text style={[styles.feedName, { color: C.textPrimary }]}>{inc.label}</Text>
+                      <Text style={[styles.feedTime, { color: C.textMuted }]}>{inc.time}</Text>
+                    </View>
+                    <View style={styles.feedSub}>
+                      <View style={[styles.feedDot, { backgroundColor: SEV_COLOR[inc.type] }]} />
+                      <Text style={[styles.feedArea, { color: C.textSecondary }]}>{inc.area}</Text>
+                      <Text style={[styles.feedSevText, { color: SEV_COLOR[inc.type] }]}>{inc.type}</Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))
+            )}
           </ScrollView>
         )}
       </Animated.View>
@@ -387,6 +540,16 @@ const styles = StyleSheet.create({
   alertDot:  { width: 5, height: 5, borderRadius: 3, backgroundColor: '#EF4444' },
   alertLabel:{ fontFamily: Fonts.semiBold, fontSize: 11, color: '#EF4444' },
   iconBtn:   { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+
+  alertBanner: {
+    position: 'absolute', left: 16, right: 16,
+    padding: '10px 14px',
+    borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.9)',
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    zIndex: 20,
+  },
+  alertBannerText: { color: '#fff', fontSize: 13, fontFamily: Fonts.semiBold },
 
   searchPanel: {
     position: 'absolute', left: 16, right: 16,

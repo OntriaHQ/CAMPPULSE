@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/login';
 import GuestHomePage      from './pages/guest/home';
+import QrNavPage          from './pages/nav/qr';
 import AdminDashboardPage from './pages/admin/index';
 import AdminIncidentsPage from './pages/admin/incidents';
 import AdminMapPage       from './pages/admin/map';
@@ -21,6 +22,7 @@ function AppRoutes() {
     <Routes>
       {/* Guest portal — public */}
       <Route path="/" element={<GuestHomePage />} />
+      <Route path="/nav/qr" element={<QrNavPage />} />
 
       {/* Auth */}
       <Route path="/login" element={<LoginPage />} />

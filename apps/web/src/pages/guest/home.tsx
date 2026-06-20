@@ -1,16 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import GuestLayout from './layout';
+import { getIncidentsNearby } from '../../services/incidents';
 
 const CAMP_LAT = 6.7617;
 const CAMP_LNG = 3.6664;
 
-const INCIDENTS = [
+const FALLBACK_INCIDENTS = [
   { id: '1', lat: 6.7635, lng: 3.6650, type: 'critical', label: 'Flooding',         area: 'Camp Road',      time: '2h ago'    },
   { id: '2', lat: 6.7650, lng: 3.6680, type: 'high',     label: 'Crowd Congestion', area: 'North Gate',     time: '5h ago'    },
   { id: '3', lat: 6.7600, lng: 3.6700, type: 'medium',   label: 'Streetlight Out',  area: 'Festival Arena', time: 'Yesterday' },
   { id: '4', lat: 6.7580, lng: 3.6640, type: 'low',      label: 'Water Supply',     area: 'Canaan Land',    time: '3d ago'    },
 ];
+
+interface IncidentItem {
+  id: string;
+  lat: number;
+  lng: number;
+  type: string;
+  label: string;
+  area: string;
+  time: string;
+}
 
 const SEV: Record<string, { color: string; label: string }> = {
   critical: { color: '#EF4444', label: 'Critical' },
@@ -40,10 +51,29 @@ export default function GuestHome() {
   const destMarkerRef = useRef<any>(null);
   const routeLineRef  = useRef<any>(null);
 
+  const [incidents, setIncidents] = useState<IncidentItem[]>(FALLBACK_INCIDENTS);
+  const [loading, setLoading] = useState(true);
   const [searchQuery,  setSearchQuery]  = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [destination,  setDestination]  = useState<Destination | null>(null);
   const [panelOpen,    setPanelOpen]    = useState(false);
+
+  useEffect(() => {
+    getIncidentsNearby(CAMP_LAT, CAMP_LNG, 2000)
+      .then(data => {
+        setIncidents(data.data.map(inc => ({
+          id: inc.id,
+          lat: (inc as any).lat ?? CAMP_LAT,
+          lng: (inc as any).lng ?? CAMP_LNG,
+          type: inc.severity,
+          label: inc.type,
+          area: inc.address_label ?? 'Unknown',
+          time: 'reported',
+        })));
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
     if (!document.getElementById('leaflet-css')) {
@@ -69,7 +99,7 @@ export default function GuestHome() {
         maxZoom: 20, subdomains: 'abcd',
       }).addTo(map);
 
-      INCIDENTS.forEach(inc => {
+      incidents.forEach(inc => {
         const el = document.createElement('div');
         el.style.cssText = `width:22px;height:22px;border-radius:50%;background:${SEV[inc.type].color};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35),0 0 0 4px ${SEV[inc.type].color}33`;
         const icon = L.divIcon({ html: el.outerHTML, className: '', iconSize: [22, 22], iconAnchor: [11, 11] });
@@ -98,7 +128,7 @@ export default function GuestHome() {
     return () => {
       if (leafletRef.current) { leafletRef.current.remove(); leafletRef.current = null; }
     };
-  }, []);
+  }, [incidents]);
 
   function navigateTo(dest: Destination) {
     setDestination(dest);
@@ -196,7 +226,7 @@ export default function GuestHome() {
         {/* Alert chip */}
         <div className="g-alert-chip">
           <span className="g-alert-dot" />
-          <span>{INCIDENTS.length} Active Incidents</span>
+          <span>{loading ? 'Loading...' : `${incidents.length} Active Incidents`}</span>
         </div>
 
         {/* Incident panel toggle */}
@@ -211,7 +241,7 @@ export default function GuestHome() {
             <button className="g-panel-close" onClick={() => setPanelOpen(false)}>✕</button>
           </div>
           <div className="g-panel-list">
-            {INCIDENTS.map(inc => (
+            {incidents.map(inc => (
               <div key={inc.id} className="g-incident-card">
                 <div className="g-incident-stripe" style={{ background: SEV[inc.type].color }} />
                 <div className="g-incident-body">

@@ -4,6 +4,8 @@ import CampMap from '../../components/map/CampMap';
 import type { MapMarker } from '../../components/map/CampMap';
 import { fetchLiveMapData } from '../../services/drivers';
 import type { LiveMapData } from '../../services/drivers';
+import boundaryData from '@camppulse/map-config/src/boundary.json';
+import { useGuestWebSocket } from '../../hooks/useWebSocket';
 
 const SEV_COLOR: Record<string, string> = {
   critical: '#EF4444',
@@ -12,11 +14,19 @@ const SEV_COLOR: Record<string, string> = {
   low: '#22C55E',
 };
 
+const ZONE_COLORS: Record<string, string> = {
+  'Zone A': '#8B5CF6',
+  'Zone B': '#EC4899',
+};
+
 export default function AdminMapPage() {
   const [data, setData] = useState<LiveMapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedIncident, setSelectedIncident] = useState<MapMarker | null>(null);
+  const [alert, setAlert] = useState<{ zone: string; severity: string } | null>(null);
+
+  const { subscribe } = useGuestWebSocket();
 
   const loadData = useCallback(async () => {
     try {
@@ -35,6 +45,20 @@ export default function AdminMapPage() {
     const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
   }, [loadData]);
+
+  useEffect(() => {
+    const unsubAlert = subscribe('zone_alert', (msg: any) => {
+      setAlert({ zone: msg.payload?.zone, severity: msg.payload?.severity });
+      loadData();
+    });
+    const unsubClearing = subscribe('zone_clearing', () => {
+      loadData();
+    });
+    return () => {
+      unsubAlert?.();
+      unsubClearing?.();
+    };
+  }, [subscribe]);
 
   const incidentMarkers: MapMarker[] = (data?.incidents ?? []).map((inc) => ({
     id: inc.id,
@@ -84,6 +108,7 @@ export default function AdminMapPage() {
             lines={[]}
             onMarkerClick={handleMarkerClick}
             height="100%"
+            boundary={boundaryData as any}
           />
 
           {error && (
@@ -104,6 +129,23 @@ export default function AdminMapPage() {
               color: 'var(--textMuted)', fontSize: 13, zIndex: 10,
             }}>
               Loading live data…
+            </div>
+          )}
+
+          {/* Congestion alert banner */}
+          {alert && (
+            <div style={{
+              position: 'absolute', top: 12, left: 12, right: 12, zIndex: 20,
+              padding: '10px 16px', borderRadius: 8,
+              background: alert.severity === 'critical' ? 'rgba(239,68,68,0.9)' : 'rgba(249,115,22,0.9)',
+              color: '#fff', fontSize: 13,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <span>Congestion in {alert.zone} ({alert.severity})</span>
+              <button onClick={() => setAlert(null)} style={{
+                background: 'none', border: 'none', color: '#fff',
+                cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1,
+              }}>&times;</button>
             </div>
           )}
 

@@ -17,6 +17,36 @@ export interface ApiResponse<T = unknown> {
   };
 }
 
+let _authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  _authToken = token;
+}
+
+export async function apiFetch<T>(
+  path: string,
+  init?: RequestInit,
+): Promise<T> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+  };
+  if (_authToken) headers['Authorization'] = `Bearer ${_authToken}`;
+  if (!(init?.body instanceof FormData)) {
+    headers['Content-Type'] ??= 'application/json';
+  }
+
+  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const msg = body?.error?.message ?? body?.detail ?? `Request failed (${res.status})`;
+    throw Object.assign(new Error(msg), { status: res.status, code: body?.error?.code });
+  }
+
+  if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
 export interface User {
   id: string;
   email: string;

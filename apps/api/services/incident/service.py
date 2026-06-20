@@ -49,8 +49,7 @@ from services.incident.schemas import (
     UpvoteResponse,
 )
 from services.incident.storage import upload_photo
-from services.routing.service import calculate_route as get_route
-from services.routing.schemas import RouteCalculateRequest, RoutePoint
+
 
 logger = logging.getLogger(__name__)
 
@@ -329,23 +328,9 @@ async def dispatch_critical_incident(
         driver_user_id = best[0]
         distance = float(best[3])
 
-        # Calculate actual route and ETA
-        try:
-            from core.redis import get_redis
-            redis_client = get_redis()
-            
-            route_req = RouteCalculateRequest(
-                origin=RoutePoint(lat=float(best[4]), lon=float(best[5])),
-                destination=RoutePoint(lat=lat, lon=lon),
-                mode="tricycle" if best[2] == "tricycle" else "walking"
-            )
-            route_res = await get_route(route_req, redis_client, session)
-            polyline = route_res.polyline
-            eta_seconds = route_res.duration_seconds
-        except Exception as e:
-            logger.warning("Failed to calculate dispatch route: %s", e)
-            polyline = None
-            eta_seconds = int(distance / 1.5)  # fallback estimate
+        # Simple distance-based ETA (no cross-service import)
+        polyline = None
+        eta_seconds = int(distance / 1.5)
 
         await update_assignment_sql(
             uuid.UUID(incident_id),

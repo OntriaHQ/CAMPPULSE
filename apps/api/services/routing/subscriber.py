@@ -21,6 +21,7 @@ class RoutingSubscriber(BaseSubscriber):
     channels = [
         "incident.created",
         "incident.resolved",
+        "congestion.flagged",
         "congestion.confirmed",
         "congestion.cleared",
     ]
@@ -38,6 +39,8 @@ class RoutingSubscriber(BaseSubscriber):
             await self._on_incident_resolved(payload)
         elif channel == "congestion.confirmed":
             await self._on_congestion_confirmed(payload)
+        elif channel == "congestion.flagged":
+            await self._on_congestion_flagged(payload)
         elif channel == "congestion.cleared":
             await self._on_congestion_cleared(payload)
 
@@ -84,6 +87,17 @@ class RoutingSubscriber(BaseSubscriber):
             "Invalidated %d route cache entries due to congestion in zone %s",
             count,
             zone,
+        )
+
+    async def _on_congestion_flagged(self, payload: dict) -> None:
+        zone = payload.get("zone", "unknown")
+        severity = payload.get("severity", "unknown")
+        count = await invalidate_route_cache(self.redis)
+        logger.info(
+            "Invalidated %d route cache entries due to congestion.flagged in zone %s (severity=%s)",
+            count,
+            zone,
+            severity,
         )
 
     async def _on_congestion_cleared(self, payload: dict) -> None:
