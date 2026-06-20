@@ -52,10 +52,10 @@ export default function AdminAnalyticsPage() {
   const totalSev = Object.values(severityBreak).reduce((a, b) => a + b, 0) || 1;
 
   const STATS = summary ? [
-    { label: 'Total Reports',  value: String(summary.total_incidents), delta: `${summary.open_incidents} open`, dir: 'down' },
-    { label: 'Active Zones',   value: String(summary.active_zones),    delta: `${summary.congestion_zones_count} congested`, dir: summary.congestion_zones_count > 0 ? 'down' : 'up' },
-    { label: 'Open Incidents', value: String(summary.open_incidents), delta: `${summary.in_progress_incidents} in progress`, dir: 'down' },
-    { label: 'Resolution Rate', value: summary.total_incidents > 0 ? `${Math.round((1 - summary.open_incidents / summary.total_incidents) * 100)}%` : '0%', delta: 'vs total', dir: 'up' },
+    { label: 'Total Reports',  value: String(summary.totalIncidents), delta: `${summary.openIncidents} open`, dir: 'down' },
+    { label: 'Active Zones',   value: String(summary.activeZones),    delta: `${summary.congestionZonesCount} congested`, dir: summary.congestionZonesCount > 0 ? 'down' : 'up' },
+    { label: 'Open Incidents', value: String(summary.openIncidents), delta: `${summary.inProgressIncidents} in progress`, dir: 'down' },
+    { label: 'Resolution Rate', value: summary.totalIncidents > 0 ? `${Math.round((1 - summary.openIncidents / summary.totalIncidents) * 100)}%` : '0%', delta: 'vs total', dir: 'up' },
   ] : [];
 
   const BY_AREA = Object.entries(byArea)
@@ -153,11 +153,11 @@ export default function AdminAnalyticsPage() {
                   <span className="bar-label">{h.zone}</span>
                   <div className="bar-track">
                     <div className="bar-fill" style={{
-                      width: `${Math.min(h.incident_count / Math.max(...hotspots.map(x => x.incident_count), 1) * 100, 100)}%`,
+                      width: `${Math.min(h.incidentCount / Math.max(...hotspots.map(x => x.incidentCount), 1) * 100, 100)}%`,
                       background: 'linear-gradient(90deg, var(--accent), var(--accentEnd))',
                     }} />
                   </div>
-                  <span className="bar-value">{h.incident_count}</span>
+                  <span className="bar-value">{h.incidentCount}</span>
                 </div>
               ))
             )}
@@ -174,11 +174,11 @@ export default function AdminAnalyticsPage() {
                 <span className="bar-label">{e.zone}</span>
                 <div className="bar-track">
                   <div className="bar-fill" style={{
-                    width: `${Math.min(e.avg_resolution_time_minutes / Math.max(...equity.map(x => x.avg_resolution_time_minutes), 1) * 100, 100)}%`,
+                    width: `${Math.min(e.avgResolutionTimeMinutes / Math.max(...equity.map(x => x.avgResolutionTimeMinutes), 1) * 100, 100)}%`,
                     background: 'linear-gradient(90deg, var(--accent), var(--accentEnd))',
                   }} />
                 </div>
-                <span className="bar-value">{Math.round(e.avg_resolution_time_minutes)}m</span>
+                <span className="bar-value">{Math.round(e.avgResolutionTimeMinutes)}m</span>
               </div>
             ))}
           </div>

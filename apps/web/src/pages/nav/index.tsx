@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import mapboxgl from 'mapbox-gl';
 import { REDEMPTION_CITY_CENTER } from '@camppulse/map-config';
 import CampMap from '../../components/map/CampMap';
@@ -7,16 +8,17 @@ import { calculateRoute } from '../../services/routes';
 import { decodePolyline } from '../../utils/polyline';
 
 const DESTINATIONS: Record<string, { lat: number; lon: number; label: string }> = {
-  'main-auditorium': { lat: 6.878, lon: 3.386, label: 'Main Auditorium' },
-  'north-gate': { lat: 6.881, lon: 3.383, label: 'North Gate' },
-  'festival-arena': { lat: 6.875, lon: 3.390, label: 'Festival Arena' },
-  'canaan-land': { lat: 6.870, lon: 3.380, label: 'Canaan Land' },
-  'south-camp': { lat: 6.867, lon: 3.378, label: 'South Camp' },
-  'medical-centre': { lat: 6.876, lon: 3.385, label: 'Medical Centre' },
+  'main-auditorium': { lat: 6.9271, lon: 3.3958, label: 'Main Auditorium' },
+  'north-gate': { lat: 6.9304, lon: 3.3954, label: 'North Gate' },
+  'festival-arena': { lat: 6.9284, lon: 3.3974, label: 'Festival Arena' },
+  'canaan-land': { lat: 6.9234, lon: 3.3934, label: 'Canaan Land' },
+  'south-camp': { lat: 6.9214, lon: 3.3924, label: 'South Camp' },
+  'medical-centre': { lat: 6.9254, lon: 3.3944, label: 'Medical Centre' },
 };
 
 export default function NavPage() {
-  const [dest, setDest] = useState('');
+  const [searchParams] = useSearchParams();
+  const [dest, setDest] = useState(searchParams.get('dest') ?? '');
   const [result, setResult] = useState<{
     distance: string;
     duration: string;
@@ -33,6 +35,7 @@ export default function NavPage() {
     lat: REDEMPTION_CITY_CENTER.lat,
     lng: REDEMPTION_CITY_CENTER.lon,
   });
+  const didAutoNavigate = useRef(false);
 
   useEffect(() => {
     if ('geolocation' in navigator) {
@@ -64,6 +67,12 @@ export default function NavPage() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!dest || !DESTINATIONS[dest] || didAutoNavigate.current) return;
+    didAutoNavigate.current = true;
+    handleNavigate();
+  }, [dest]);
 
   const handleNavigate = useCallback(async () => {
     if (!dest || !DESTINATIONS[dest]) return;

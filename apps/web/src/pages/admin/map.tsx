@@ -4,7 +4,7 @@ import CampMap from '../../components/map/CampMap';
 import type { MapMarker } from '../../components/map/CampMap';
 import { fetchLiveMapData } from '../../services/drivers';
 import type { LiveMapData } from '../../services/drivers';
-import boundaryData from '@camppulse/map-config/src/boundary.json';
+import { campBoundary } from '@camppulse/map-config';
 import { useGuestWebSocket } from '../../hooks/useWebSocket';
 
 const SEV_COLOR: Record<string, string> = {
@@ -108,7 +108,7 @@ export default function AdminMapPage() {
             lines={[]}
             onMarkerClick={handleMarkerClick}
             height="100%"
-            boundary={boundaryData as any}
+            boundary={campBoundary as any}
           />
 
           {error && (

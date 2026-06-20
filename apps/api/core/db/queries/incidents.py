@@ -169,6 +169,8 @@ async def select_nearby_incidents(
             SELECT
                 id, type, severity, status,
                 address_label, upvote_count,
+                ST_Y(location::geometry) AS lat,
+                ST_X(location::geometry) AS lon,
                 ST_Distance(
                     location::geography,
                     ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography

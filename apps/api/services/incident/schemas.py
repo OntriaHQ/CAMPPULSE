@@ -83,6 +83,7 @@ class IncidentNearbyItem(BaseModel):
     status: str
     address_label: str | None = None
     upvote_count: int
+    location: dict
     distance_metres: float
 
 

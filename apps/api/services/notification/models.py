@@ -33,7 +33,7 @@ class NotificationLog(Base):
     )
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
-        ForeignKey("users.id", on_delete="CASCADE"),
+        ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
     type: Mapped[NotificationType] = mapped_column(

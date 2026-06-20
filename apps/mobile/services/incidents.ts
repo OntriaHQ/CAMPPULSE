@@ -8,6 +8,10 @@ export interface IncidentNearby {
   address_label: string | null;
   upvote_count: number;
   distance_metres: number;
+  location: {
+    lat: number;
+    lon: number;
+  };
 }
 
 export async function getIncidentsNearby(

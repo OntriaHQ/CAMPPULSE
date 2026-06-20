@@ -39,12 +39,10 @@ async def calculate_route(
 
     restricted_segments = await get_restricted_segments(session)
     avoid_waypoints = []
-    if restricted_segments:
-        for seg in restricted_segments:
-            avoid_waypoints.append(
-                ((request.origin.lat + request.destination.lat) / 2,
-                 (request.origin.lon + request.destination.lon) / 2)
-            )
+    # Note: Mapbox doesn't naturally support "avoid points". 
+    # For now, we will simply not use the 'avoid' logic until we have 
+    # a proper graph-based router or better detour calculation.
+    # We keep the restricted_segments list in the response for UI display.
 
     result = await mapbox_calculate_route(
         origin=(request.origin.lat, request.origin.lon),
@@ -96,12 +94,8 @@ async def reroute(
     all_avoid_ids = set(request.avoid_segment_ids) | restricted_ids
 
     avoid_waypoints = []
-    if all_avoid_ids:
-        for seg in restricted_segments:
-            avoid_waypoints.append(
-                ((request.origin.lat + request.destination.lat) / 2,
-                 (request.origin.lon + request.destination.lon) / 2)
-            )
+    # Rerouting avoidance logic currently only supports pass-through waypoints 
+    # if we had them. For now, we will not use midpoint-based avoidance.
 
     result = await mapbox_calculate_route(
         origin=(request.origin.lat, request.origin.lon),

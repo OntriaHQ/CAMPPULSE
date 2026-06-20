@@ -57,6 +57,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#0A0A0F"
         }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox",
+          "RNMapboxMapsDownloadToken": "NOT_NEEDED_FOR_EXPO_DEV_CLIENT_LOCAL"
+        }
       ]
     ],
     "experiments": {

@@ -210,7 +210,8 @@ async def get_incidents_nearby(
             status=r[3],
             address_label=r[4],
             upvote_count=r[5],
-            distance_metres=float(r[6]),
+            location={"lat": float(r[6]), "lon": float(r[7])},
+            distance_metres=float(r[8]),
         ).model_dump()
         for r in rows
     ]

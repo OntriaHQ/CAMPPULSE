@@ -1,11 +1,11 @@
 import { gql } from './graphql';
 
 export interface DashboardSummary {
-  total_incidents: number;
-  open_incidents: number;
-  in_progress_incidents: number;
-  active_zones: number;
-  congestion_zones_count: number;
+  totalIncidents: number;
+  openIncidents: number;
+  inProgressIncidents: number;
+  activeZones: number;
+  congestionZonesCount: number;
 }
 
 export interface IncidentType {
@@ -15,35 +15,35 @@ export interface IncidentType {
   status: string;
   zone: string | null;
   description: string | null;
-  photo_url: string | null;
-  address_label: string | null;
-  upvote_count: number;
+  photoUrl: string | null;
+  addressLabel: string | null;
+  upvoteCount: number;
   department: string | null;
-  reporter_name: string | null;
-  assignee_name: string | null;
-  created_at: string;
-  updated_at: string | null;
-  resolved_at: string | null;
+  reporterName: string | null;
+  assigneeName: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  resolvedAt: string | null;
   location: { lat: number; lon: number } | null;
 }
 
 export interface HotspotType {
   zone: string;
-  incident_count: number;
+  incidentCount: number;
   lat: number;
   lon: number;
 }
 
 export interface EquityMetricType {
   zone: string;
-  total_incidents: number;
-  avg_resolution_time_minutes: number;
+  totalIncidents: number;
+  avgResolutionTimeMinutes: number;
 }
 
 export interface UserType {
   id: string;
   email: string;
-  full_name: string;
+  fullName: string;
   role: string;
   zone: string | null;
 }
@@ -60,11 +60,11 @@ export async function fetchDashboardSummary(): Promise<DashboardSummary> {
   return gql<{ dashboardSummary: DashboardSummary }>(`
     query DashboardSummary {
       dashboardSummary {
-        total_incidents
-        open_incidents
-        in_progress_incidents
-        active_zones
-        congestion_zones_count
+        totalIncidents
+        openIncidents
+        inProgressIncidents
+        activeZones
+        congestionZonesCount
       }
     }
   `).then(d => d.dashboardSummary);
@@ -85,15 +85,15 @@ export async function fetchIncidentList(
         status
         zone
         description
-        photo_url
-        address_label
-        upvote_count
+        photoUrl
+        addressLabel
+        upvoteCount
         department
-        reporter_name
-        assignee_name
-        created_at
-        updated_at
-        resolved_at
+        reporterName
+        assigneeName
+        createdAt
+        updatedAt
+        resolvedAt
         location { lat lon }
       }
     }
@@ -105,7 +105,7 @@ export async function fetchIncidentHotspots(): Promise<HotspotType[]> {
     query IncidentHotspots {
       incidentHotspots {
         zone
-        incident_count
+        incidentCount
         lat
         lon
       }
@@ -118,8 +118,8 @@ export async function fetchEquityMetrics(): Promise<EquityMetricType[]> {
     query EquityMetrics {
       equityMetrics {
         zone
-        total_incidents
-        avg_resolution_time_minutes
+        totalIncidents
+        avgResolutionTimeMinutes
       }
     }
   `).then(d => d.equityMetrics);
@@ -131,7 +131,7 @@ export async function fetchUsers(role?: string, zone?: string, limit = 50, offse
       users(role: $role, zone: $zone, limit: $limit, offset: $offset) {
         id
         email
-        full_name
+        fullName
         role
         zone
       }

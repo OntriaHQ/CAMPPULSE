@@ -170,7 +170,7 @@ export default function AdminIncidentsPage() {
   }
 
   const filtered = incidents.filter(r => {
-    if (search   && !r.type.toLowerCase().includes(search.toLowerCase()) && !(r.address_label?.toLowerCase().includes(search.toLowerCase()))) return false;
+    if (search   && !r.type.toLowerCase().includes(search.toLowerCase()) && !(r.addressLabel?.toLowerCase().includes(search.toLowerCase()))) return false;
     if (severity && r.severity !== severity) return false;
     if (status   && r.status   !== status)   return false;
     if (area     && r.zone     !== area)     return false;
@@ -307,7 +307,7 @@ export default function AdminIncidentsPage() {
                   <td style={{ color: 'var(--textMuted)', fontSize: 12 }}>{r.id.slice(0, 8)}</td>
                   <td className="primary">{r.type}</td>
                   <td>
-                    {r.address_label ?? `${r.location?.lat.toFixed(4)}, ${r.location?.lon.toFixed(4)}`}
+                    {r.addressLabel ?? `${r.location?.lat.toFixed(4)}, ${r.location?.lon.toFixed(4)}`}
                     <br /><span style={{ fontSize: 11, color: 'var(--textMuted)' }}>{r.zone ?? ''}</span>
                   </td>
                   <td>
@@ -317,8 +317,8 @@ export default function AdminIncidentsPage() {
                     </span>
                   </td>
                   <td><span className={`pill ${STAT_CLASS[r.status]}`}>{STAT_LABEL[r.status] ?? r.status}</span></td>
-                  <td>{r.reporter_name ?? 'Anonymous'}</td>
-                  <td style={{ fontSize: 12 }}>{new Date(r.created_at).toLocaleDateString()}</td>
+                  <td>{r.reporterName ?? 'Anonymous'}</td>
+                  <td style={{ fontSize: 12 }}>{new Date(r.createdAt).toLocaleDateString()}</td>
                   <td onClick={e => e.stopPropagation()} style={{ cursor: 'default' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {r.status === 'submitted' && (
@@ -439,7 +439,7 @@ export default function AdminIncidentsPage() {
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--textMuted)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 5 }}>
                   Assignee
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text)' }}>{detailIncident.assignee_name || <span style={{ color: 'var(--textMuted)', fontStyle: 'italic' }}>Unassigned</span>}</div>
+                <div style={{ fontSize: 13, color: 'var(--text)' }}>{detailIncident.assigneeName || <span style={{ color: 'var(--textMuted)', fontStyle: 'italic' }}>Unassigned</span>}</div>
               </div>
               <div>
                 <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--textMuted)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 5 }}>
@@ -450,8 +450,8 @@ export default function AdminIncidentsPage() {
                     ? `${detailIncident.location.lat.toFixed(6)}, ${detailIncident.location.lon.toFixed(6)}`
                     : <span style={{ color: 'var(--textMuted)', fontStyle: 'italic' }}>No coordinates</span>}
                 </div>
-                {detailIncident.address_label && (
-                  <div style={{ fontSize: 11, color: 'var(--textSub)', marginTop: 2 }}>{detailIncident.address_label}</div>
+                {detailIncident.addressLabel && (
+                  <div style={{ fontSize: 11, color: 'var(--textSub)', marginTop: 2 }}>{detailIncident.addressLabel}</div>
                 )}
               </div>
               <div>
@@ -477,9 +477,9 @@ export default function AdminIncidentsPage() {
               </div>
               <div style={{ background: 'var(--surface2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', overflow: 'hidden' }}>
                 {[
-                  { label: 'Created', value: detailIncident.created_at },
-                  { label: 'Updated', value: detailIncident.updated_at },
-                  { label: 'Resolved', value: detailIncident.resolved_at },
+                  { label: 'Created', value: detailIncident.createdAt },
+                  { label: 'Updated', value: detailIncident.updatedAt },
+                  { label: 'Resolved', value: detailIncident.resolvedAt },
                 ].filter(t => t.value).map((t, i) => (
                   <div key={t.label} style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -490,7 +490,7 @@ export default function AdminIncidentsPage() {
                     <span style={{ fontSize: 12, color: 'var(--text)' }}>{new Date(t.value!).toLocaleString()}</span>
                   </div>
                 ))}
-                {!detailIncident.created_at && !detailIncident.updated_at && !detailIncident.resolved_at && (
+                {!detailIncident.createdAt && !detailIncident.updatedAt && !detailIncident.resolvedAt && (
                   <div style={{ padding: 14, textAlign: 'center', fontSize: 12, color: 'var(--textMuted)', fontStyle: 'italic' }}>No timeline data</div>
                 )}
               </div>

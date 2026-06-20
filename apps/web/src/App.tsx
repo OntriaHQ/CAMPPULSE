@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import LoginPage from './pages/login';
 import GuestHomePage      from './pages/guest/home';
+import NavPage            from './pages/nav/index';
 import QrNavPage          from './pages/nav/qr';
 import AdminDashboardPage from './pages/admin/index';
 import AdminIncidentsPage from './pages/admin/incidents';
@@ -11,6 +12,7 @@ import AdminAnalyticsPage from './pages/admin/analytics';
 import AdminBroadcastPage from './pages/admin/broadcast';
 import AdminDriversPage   from './pages/admin/drivers';
 import AdminEventsPage    from './pages/admin/events';
+import ReportPage from './pages/report';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -22,7 +24,9 @@ function AppRoutes() {
     <Routes>
       {/* Guest portal — public */}
       <Route path="/" element={<GuestHomePage />} />
+      <Route path="/nav" element={<NavPage />} />
       <Route path="/nav/qr" element={<QrNavPage />} />
+      <Route path="/report" element={<ReportPage />} />
 
       {/* Auth */}
       <Route path="/login" element={<LoginPage />} />

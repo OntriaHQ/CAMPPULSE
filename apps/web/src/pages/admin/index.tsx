@@ -39,10 +39,10 @@ export default function AdminDashboardPage() {
   }));
 
   const STATS = summary ? [
-    { label: 'Total Reports',    value: String(summary.total_incidents), delta: `${summary.open_incidents} open`, dir: 'down' },
-    { label: 'Open',             value: String(summary.open_incidents),  delta: `${summary.in_progress_incidents} in progress`, dir: 'down' },
-    { label: 'Active Zones',     value: String(summary.active_zones),   delta: `${summary.congestion_zones_count} congested`, dir: summary.congestion_zones_count > 0 ? 'down' : 'up' },
-    { label: 'Congestion Zones', value: String(summary.congestion_zones_count), delta: 'flagged areas', dir: summary.congestion_zones_count > 0 ? 'down' : 'up' },
+    { label: 'Total Reports',    value: String(summary.totalIncidents), delta: `${summary.openIncidents} open`, dir: 'down' },
+    { label: 'Open',             value: String(summary.openIncidents),  delta: `${summary.inProgressIncidents} in progress`, dir: 'down' },
+    { label: 'Active Zones',     value: String(summary.activeZones),   delta: `${summary.congestionZonesCount} congested`, dir: summary.congestionZonesCount > 0 ? 'down' : 'up' },
+    { label: 'Congestion Zones', value: String(summary.congestionZonesCount), delta: 'flagged areas', dir: summary.congestionZonesCount > 0 ? 'down' : 'up' },
   ] : [];
 
   return (
@@ -78,13 +78,13 @@ export default function AdminDashboardPage() {
                     <div className="recent-stripe" style={{ background: `var(--${r.severity === 'critical' ? 'critical' : r.severity === 'high' ? 'high' : r.severity === 'medium' ? 'medium' : 'low'})` }} />
                     <div className="flex-1">
                       <div className="recent-type">{r.type}</div>
-                      <div className="recent-loc">{r.address_label ?? `${r.location?.lat?.toFixed(3)}, ${r.location?.lon?.toFixed(3)}`} · {r.zone ?? 'Unknown'}</div>
+                      <div className="recent-loc">{r.addressLabel ?? `${r.location?.lat?.toFixed(3)}, ${r.location?.lon?.toFixed(3)}`} · {r.zone ?? 'Unknown'}</div>
                     </div>
                     <span className={`pill ${SEV_CLASS[r.severity]}`}>
                       <span className="pill-dot" style={{ background: 'currentColor' }} />
                       {r.severity}
                     </span>
-                    <div className="recent-ago">{new Date(r.created_at).toLocaleDateString()}</div>
+                    <div className="recent-ago">{new Date(r.createdAt).toLocaleDateString()}</div>
                   </div>
                 ))}
               </div>

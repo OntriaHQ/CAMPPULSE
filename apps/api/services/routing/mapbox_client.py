@@ -26,18 +26,32 @@ async def _mapbox_request(
     avoid_waypoints: list[tuple[float, float]] | None = None,
 ) -> dict | None:
     profile = PROFILE_MAP.get(mode, "walking")
-    coordinates = f"{origin[1]},{origin[0]};{destination[1]},{destination[0]}"
+    
+    # Base coordinates: [origin, (optional avoid_waypoints), destination]
+    coords_list = [f"{origin[1]},{origin[0]}"]
+    if avoid_waypoints:
+        for lat, lon in avoid_waypoints:
+            coords_list.append(f"{lon},{lat}")
+    coords_list.append(f"{destination[1]},{destination[0]}")
+    
+    coordinates = ";".join(coords_list)
     url = f"{MAPBOX_BASE}/{profile}/{coordinates}"
+    
     params: dict = {
         "access_token": settings.mapbox_token,
-        "geometries": "polyline6",
+        "geometries": "polyline",
         "overview": "full",
         "steps": "false",
     }
+    
     if avoid_waypoints:
-        avoid_str = ";".join(f"{lon},{lat}" for lat, lon in avoid_waypoints)
-        params["waypoints"] = f"0;{len(avoid_waypoints) + 1}"
+        # waypoints=0;n-1 specifies which indices are "breakpoints" (stopovers)
+        # We treat all points as stopovers for now to ensure they are on the route if we use "steer points"
+        # However, Mapbox doesn't have "avoid points" via waypoints. 
+        # This implementation currently treats avoid_waypoints as intermediate points.
+        params["waypoints"] = f"0;{len(coords_list) - 1}"
         params["waypoint_names"] = ";".join(["origin"] + [f"avoid_{i}" for i in range(len(avoid_waypoints))] + ["destination"])
+    
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as resp:
             if resp.status != 200:

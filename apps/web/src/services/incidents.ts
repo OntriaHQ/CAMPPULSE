@@ -36,6 +36,7 @@ export interface IncidentNearbyItem {
   status: Status;
   address_label: string | null;
   upvote_count: number;
+  location: { lat: number; lon: number };
   distance_metres: number;
 }
 

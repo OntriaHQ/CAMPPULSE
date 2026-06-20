@@ -12,7 +12,7 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "db:migrate": "docker compose -f infra/docker-compose.yml exec api alembic upgrade head",
-    "db:seed": "turbo run db:seed",
+    "db:seed": "docker compose -f infra/docker-compose.yml exec api python scripts/seed.py",
     "smoke": "bash scripts/smoke-test.sh",
     "field-map": "python scripts/field-map.py"
   },
