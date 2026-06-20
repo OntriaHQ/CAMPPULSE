@@ -7,6 +7,31 @@ const SEV_CLASS: Record<string, string> = { critical: 'pill-critical', high: 'pi
 const STAT_CLASS: Record<string, string> = { submitted: 'pill-muted', assigned: 'pill-active', in_progress: 'pill-high', resolved: 'pill-resolved', closed: 'pill-muted' };
 const STAT_LABEL: Record<string, string> = { submitted: 'Submitted', assigned: 'Assigned', in_progress: 'In Progress', resolved: 'Resolved', closed: 'Closed' };
 
+// SLA response windows (minutes) — mirrors backend routing.py RESPONSE_WINDOWS
+const SLA_MINUTES: Record<string, number> = {
+  critical: 30,
+  high:     120,
+  medium:   360,
+  low:      2880,
+};
+
+const ACTIVE_STATUSES = new Set(['submitted', 'assigned', 'in_progress']);
+
+function getSLA(severity: string, createdAt: string, now: number) {
+  const slaMins = SLA_MINUTES[severity] ?? 360;
+  const deadline = new Date(createdAt).getTime() + slaMins * 60_000;
+  const remaining = deadline - now;
+  const pct = Math.max(0, remaining / (slaMins * 60_000));
+  const isOverdue = remaining < 0;
+  const absMs = Math.abs(remaining);
+  const totalMins = Math.floor(absMs / 60_000);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  const timeStr = h > 0 ? `${h}h ${m}m` : `${totalMins}m`;
+  const color = isOverdue ? '#EF4444' : pct < 0.25 ? '#F97316' : pct < 0.5 ? '#EAB308' : '#22C55E';
+  return { isOverdue, timeStr, color, pct };
+}
+
 const AREAS = ['Auditorium', 'North Gate', 'Festival Arena', 'Canaan Land', 'South Camp', 'Camp Road'];
 const DEPARTMENTS = ['Security', 'Medical', 'Facilities', 'Logistics', 'Admin', 'Events'];
 
@@ -47,6 +72,7 @@ function SkeletonRow() {
       <td style={{ padding: '13px 16px' }}><Skeleton width={76} height={22} /></td>
       <td style={{ padding: '13px 16px' }}><Skeleton width={70} height={14} /></td>
       <td style={{ padding: '13px 16px' }}><Skeleton width={60} height={12} /></td>
+      <td style={{ padding: '13px 16px' }}><Skeleton width={64} height={16} /></td>
       <td style={{ padding: '13px 16px' }}><Skeleton width={120} height={28} /></td>
     </tr>
   );
@@ -56,6 +82,7 @@ export default function AdminIncidentsPage() {
   const [incidents, setIncidents] = useState<IncidentType[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState('');
+  const [now,       setNow]       = useState(() => Date.now());
   const [search,   setSearch]   = useState('');
   const [severity, setSeverity] = useState('');
   const [status,   setStatus]   = useState('');
@@ -78,6 +105,11 @@ export default function AdminIncidentsPage() {
       .then(setIncidents)
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
   }, []);
 
   async function handleResolve(id: string) {
@@ -260,6 +292,7 @@ export default function AdminIncidentsPage() {
                 <th>Status</th>
                 <th>Reported by</th>
                 <th>Time</th>
+                <th>SLA</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -286,6 +319,7 @@ export default function AdminIncidentsPage() {
                 <th>Status</th>
                 <th>Reported by</th>
                 <th>Time</th>
+                <th>SLA</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -319,6 +353,23 @@ export default function AdminIncidentsPage() {
                   <td><span className={`pill ${STAT_CLASS[r.status]}`}>{STAT_LABEL[r.status] ?? r.status}</span></td>
                   <td>{r.reporter_name ?? 'Anonymous'}</td>
                   <td style={{ fontSize: 12 }}>{new Date(r.created_at).toLocaleDateString()}</td>
+                  <td onClick={e => e.stopPropagation()} style={{ cursor: 'default' }}>
+                    {ACTIVE_STATUSES.has(r.status) ? (() => {
+                      const sla = getSLA(r.severity, r.created_at, now);
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: sla.color }}>
+                              {sla.isOverdue ? 'OVERDUE' : sla.timeStr}
+                            </span>
+                          </div>
+                          <div style={{ width: 64, height: 3, borderRadius: 2, background: 'var(--surface2)' }}>
+                            <div style={{ height: '100%', borderRadius: 2, background: sla.color, width: `${sla.pct * 100}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })() : <span style={{ fontSize: 11, color: 'var(--textMuted)' }}>—</span>}
+                  </td>
                   <td onClick={e => e.stopPropagation()} style={{ cursor: 'default' }}>
                     <div style={{ display: 'flex', gap: 6 }}>
                       {r.status === 'submitted' && (
@@ -470,6 +521,31 @@ export default function AdminIncidentsPage() {
                 {detailIncident.description || <span style={{ color: 'var(--textMuted)', fontStyle: 'italic' }}>No description provided.</span>}
               </div>
             </div>
+
+            {ACTIVE_STATUSES.has(detailIncident.status) && (() => {
+              const sla = getSLA(detailIncident.severity, detailIncident.created_at, now);
+              const slaMins = SLA_MINUTES[detailIncident.severity] ?? 360;
+              const deadlineStr = new Date(new Date(detailIncident.created_at).getTime() + slaMins * 60_000).toLocaleString();
+              return (
+                <div style={{ marginBottom: 20, padding: 14, borderRadius: 'var(--radius-md)', background: sla.color + '12', border: `1px solid ${sla.color}40` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--textMuted)', textTransform: 'uppercase', letterSpacing: 0.6 }}>
+                      Escalation SLA
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: sla.color }}>
+                      {sla.isOverdue ? `OVERDUE by ${sla.timeStr}` : `${sla.timeStr} remaining`}
+                    </span>
+                  </div>
+                  <div style={{ height: 6, borderRadius: 3, background: 'var(--surface2)', overflow: 'hidden', marginBottom: 8 }}>
+                    <div style={{ height: '100%', borderRadius: 3, background: sla.color, width: `${sla.pct * 100}%`, transition: 'width 0.3s' }} />
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--textMuted)' }}>
+                    Target response: <strong style={{ color: 'var(--textSub)' }}>{slaMins >= 60 ? `${slaMins / 60}h` : `${slaMins}m`}</strong>
+                    &nbsp;· Deadline: <strong style={{ color: 'var(--textSub)' }}>{deadlineStr}</strong>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--textMuted)', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 }}>

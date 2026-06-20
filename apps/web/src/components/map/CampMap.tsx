@@ -22,9 +22,16 @@ export interface MapLine {
   dash?: number[];
 }
 
+export interface HeatmapPoint {
+  lat: number;
+  lng: number;
+  weight?: number; // 0.0 – 1.0
+}
+
 interface Props {
   markers?: MapMarker[];
   lines?: MapLine[];
+  heatmapPoints?: HeatmapPoint[];
   boundary?: { coordinates: [number, number][][] } | null;
   zones?: Array<{
     id: string;
@@ -43,6 +50,7 @@ const DEFAULT_STYLE = 'mapbox://styles/mapbox/dark-v11';
 export default function CampMap({
   markers = [],
   lines = [],
+  heatmapPoints = [],
   boundary,
   zones,
   onMapClick,
@@ -174,6 +182,54 @@ export default function CampMap({
       });
     });
   }, [lines, loaded]);
+
+  // Heatmap layer for congestion / incident density
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const SRC = 'incidents-heat-src';
+    const LAYER = 'incidents-heat';
+
+    if (map.getLayer(LAYER)) map.removeLayer(LAYER);
+    if (map.getSource(SRC)) map.removeSource(SRC);
+
+    if (!heatmapPoints.length) return;
+
+    map.addSource(SRC, {
+      type: 'geojson',
+      data: {
+        type: 'FeatureCollection',
+        features: heatmapPoints.map(p => ({
+          type: 'Feature' as const,
+          properties: { weight: p.weight ?? 0.5 },
+          geometry: { type: 'Point' as const, coordinates: [p.lng, p.lat] },
+        })),
+      },
+    });
+
+    const firstSymbol = map.getStyle().layers?.find(l => l.type === 'symbol')?.id;
+
+    map.addLayer({
+      id: LAYER,
+      type: 'heatmap',
+      source: SRC,
+      paint: {
+        'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 1, 1],
+        'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 16, 2.0],
+        'heatmap-color': [
+          'interpolate', ['linear'], ['heatmap-density'],
+          0,   'rgba(0,0,0,0)',
+          0.15, 'rgba(234,179,8,0.4)',
+          0.4,  'rgba(249,115,22,0.6)',
+          0.7,  'rgba(239,68,68,0.78)',
+          1,    'rgba(239,68,68,0.92)',
+        ],
+        'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 10, 45, 14, 70, 17, 100],
+        'heatmap-opacity': 0.78,
+      },
+    }, firstSymbol);
+  }, [heatmapPoints, loaded]);
 
   // Render camp boundary
   useEffect(() => {
