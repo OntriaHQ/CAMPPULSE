@@ -131,38 +131,32 @@ class NotificationSubscriber(BaseSubscriber):
         severity = payload.get("severity", "low")
         ping_count = payload.get("ping_count", 0)
         async with self.session_factory() as session:
-            await send_in_app_notification(
+            await send_zone_broadcast(
                 session=session,
-                user_id="*",
-                type="congestion_alert",
+                zone=zone,
                 title="Congestion alert",
                 body=f"Zone {zone} is congested ({severity}, {ping_count} pings).",
-                data={"zone": zone, "severity": severity},
             )
 
     async def _on_congestion_cleared(self, payload: dict) -> None:
         zone = payload.get("zone", "unknown")
         async with self.session_factory() as session:
-            await send_in_app_notification(
+            await send_zone_broadcast(
                 session=session,
-                user_id="*",
-                type="congestion_alert",
+                zone=zone,
                 title="Congestion cleared",
                 body=f"Zone {zone} is no longer congested.",
-                data={"zone": zone},
             )
 
     async def _on_congestion_anticipated(self, payload: dict) -> None:
         zone = payload.get("zone", "unknown")
         eta = payload.get("eta_minutes", 10)
         async with self.session_factory() as session:
-            await send_in_app_notification(
+            await send_zone_broadcast(
                 session=session,
-                user_id="*",
-                type="congestion_alert",
+                zone=zone,
                 title="Anticipated congestion",
                 body=f"Zone {zone} may become congested in ~{eta} minutes.",
-                data={"zone": zone, "eta_minutes": eta},
             )
 
     async def _on_notification_broadcast(self, payload: dict) -> None:

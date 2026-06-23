@@ -54,6 +54,7 @@ async def _handle_ping(
     user_id: str,
     redis_client: redis.Redis,
     session: AsyncSession,
+    role: str | None = None,
 ) -> None:
     lat = payload.get("lat")
     lon = payload.get("lon")
@@ -68,6 +69,7 @@ async def _handle_ping(
         lon=float(lon),
         accuracy=payload.get("accuracy"),
         timestamp=payload.get("timestamp"),
+        role=role,
     )
 
     if accepted:
@@ -101,6 +103,7 @@ async def ws_location_authenticated(
         return
 
     user_id = claims.get("sub") or str(uuid.uuid4())
+    role = claims.get("role")
     redis_client = get_redis()
     session_factory = get_session_factory()
 
@@ -122,7 +125,7 @@ async def ws_location_authenticated(
                     continue
 
                 if msg.type == "location_ping":
-                    await _handle_ping(websocket, msg.payload, user_id, redis_client, session)
+                    await _handle_ping(websocket, msg.payload, user_id, redis_client, session, role)
                 else:
                     await websocket.send_text(
                         json.dumps(_build_message("error", {"detail": f"Unknown message type: {msg.type}"}))

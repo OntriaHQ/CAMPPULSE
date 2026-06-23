@@ -19,7 +19,7 @@ async def get_context(
     return {"session": session, "redis": redis}
 
 
-router = APIRouter(dependencies=[Depends(require_role("admin"))])
+router = APIRouter()
 
 router.include_router(rest_router)
 

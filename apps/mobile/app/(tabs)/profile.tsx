@@ -91,6 +91,14 @@ export default function ProfileScreen() {
             ))}
           </View>
 
+          {user?.role === 'driver' && (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(tabs)/drive')}>
+              <LinearGradient colors={['#0EA5E9', '#0284C7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.driverModeBtn}>
+                <Text style={styles.driverModeText}>Open Driver Mode</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: C.textMuted }]}>Account Info</Text>
             <View style={[styles.card, { backgroundColor: C.surface, borderColor: C.border }]}>
@@ -173,6 +181,8 @@ function useStyles(C: ReturnType<typeof useColors>) {
     statCell:    { flex: 1, alignItems: 'center', paddingVertical: 18, gap: 3 },
     statNum:     { fontFamily: Fonts.bold, fontSize: 24 },
     statLabel:   { fontFamily: Fonts.regular, fontSize: 12 },
+    driverModeBtn:  { borderRadius: Radius.xl, paddingVertical: 16, alignItems: 'center' },
+    driverModeText: { fontFamily: Fonts.semiBold, fontSize: 15, color: '#fff' },
     section:     { gap: 10 },
     sectionTitle:{ fontFamily: Fonts.semiBold, fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', paddingHorizontal: 4 },
     card:        { borderRadius: Radius.xl, borderWidth: 1, overflow: 'hidden' },

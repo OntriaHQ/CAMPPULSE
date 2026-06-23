@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -8,10 +8,10 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     full_name: str = Field(min_length=1, max_length=255)
-    phone: str | None = Field(default=None, max_length=20)
+    phone: Optional[str] = Field(default=None, max_length=20)
     role: Literal["resident", "driver"]
-    camp_id: str | None = Field(default=None, max_length=100)
-    zone: str | None = Field(default=None, max_length=100)
+    camp_id: Optional[str] = Field(default=None, max_length=100)
+    zone: Optional[str] = Field(default=None, max_length=100)
 
 
 class LoginRequest(BaseModel):
@@ -25,7 +25,7 @@ class RefreshRequest(BaseModel):
 
 class UserPublic(BaseModel):
     id: str
-    email: str | None
+    email: Optional[str]
     full_name: str
     role: str
     kyc_status: str
@@ -52,13 +52,13 @@ class RefreshResponse(BaseModel):
 
 class UserProfile(BaseModel):
     id: str
-    email: str | None
+    email: Optional[str]
     full_name: str
-    phone: str | None
+    phone: Optional[str]
     role: str
     kyc_status: str
-    camp_id: str | None
-    zone: str | None
+    camp_id: Optional[str]
+    zone: Optional[str]
     created_at: datetime
 
     model_config = {"from_attributes": True}

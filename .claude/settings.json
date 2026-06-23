@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(awk '/Started server process \\\\[27730\\\\]/{found=1} found' /tmp/api.log)",
+      "Bash(redis-cli FLUSHDB)",
+      "Bash(.venv/bin/python3 -c ' *)",
+      "Bash(xcrun simctl *)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)"
+    ]
+  }
+}

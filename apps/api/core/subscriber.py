@@ -41,23 +41,34 @@ class BaseSubscriber(ABC):
         await self._pubsub.close()
 
     async def _listen(self) -> None:
-        try:
-            async for message in self._pubsub.listen():
-                if message["type"] != "message":
-                    continue
-                channel = message["channel"]
-                data = message["data"]
+        while True:
+            try:
+                async for message in self._pubsub.listen():
+                    if message["type"] != "message":
+                        continue
+                    channel = message["channel"]
+                    data = message["data"]
+                    try:
+                        envelope = json.loads(data)
+                        payload = envelope.get("payload", envelope)
+                        await self.handle(channel, payload)
+                    except Exception:
+                        logger.exception(
+                            "Error processing message on channel %s", channel
+                        )
+            except asyncio.CancelledError:
+                return
+            except Exception:
+                logger.exception(
+                    "%s listener connection dropped, reconnecting", self.__class__.__name__
+                )
+                await asyncio.sleep(1)
                 try:
-                    payload = json.loads(data)
-                    await self.handle(channel, payload)
+                    await self._pubsub.subscribe(*self.channels)
+                except asyncio.CancelledError:
+                    return
                 except Exception:
-                    logger.exception(
-                        "Error processing message on channel %s", channel
-                    )
-        except asyncio.CancelledError:
-            pass
-        except Exception:
-            logger.exception("Fatal error in subscriber listener")
+                    logger.exception("%s failed to resubscribe", self.__class__.__name__)
 
     @abstractmethod
     async def handle(self, channel: str, payload: dict) -> None:

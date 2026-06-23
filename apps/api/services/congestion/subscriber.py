@@ -80,17 +80,17 @@ class CongestionSubscriber(BaseSubscriber):
         _zone_ping_counters[zone] = _zone_ping_counters.get(zone, 0) + 1
         count = _zone_ping_counters[zone]
 
-        # Evaluate every N-th ping
-        if count % _EVAL_EVERY_N != 0:
-            return
-
         window_key = f"congestion:window:{zone}:w1"
         now = time.time()
 
-        # Add to W1 sorted set with TTL
+        # Add every ping to the W1 sorted set with TTL
         member = f"{user_id}:{now}"
         await self.redis.zadd(window_key, {member: now})
         await self.redis.expire(window_key, self.w1_window)
+
+        # Evaluate (zcount + threshold check) every N-th ping to limit Redis load
+        if count % _EVAL_EVERY_N != 0:
+            return
 
         # Count pings within W1 window
         cutoff = now - self.w1_window

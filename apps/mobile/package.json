@@ -14,7 +14,7 @@
   "dependencies": {
     "@camppulse/constants": "workspace:*",
     "@camppulse/shared-types": "workspace:*",
-    "@expo-google-fonts/poppins": "^0.2.3",
+    "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/metro-runtime": "^6.1.2",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "~2.2.0",

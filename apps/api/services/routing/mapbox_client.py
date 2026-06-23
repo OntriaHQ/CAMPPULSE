@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import math
 
 import aiohttp
 
@@ -12,6 +13,35 @@ logger = logging.getLogger(__name__)
 
 MAPBOX_BASE = "https://api.mapbox.com/directions/v5/mapbox"
 ORS_BASE = "https://api.openrouteservice.org/v2/directions"
+
+_STRAIGHT_LINE_SPEED_MPS = {"walking": 1.3, "tricycle": 6.0}
+
+
+def _straight_line_route(
+    origin: tuple[float, float],
+    destination: tuple[float, float],
+    mode: str,
+) -> dict:
+    """Direct point-to-point fallback used when no routing provider is reachable
+    (e.g. no Mapbox/ORS API key configured in this environment)."""
+    from services.routing.polyline import encode_polyline
+
+    lat1, lon1 = origin
+    lat2, lon2 = destination
+    earth_radius_m = 6_371_000
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+    distance_metres = earth_radius_m * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    speed = _STRAIGHT_LINE_SPEED_MPS.get(mode, _STRAIGHT_LINE_SPEED_MPS["walking"])
+    return {
+        "polyline": encode_polyline([origin, destination]),
+        "distance_metres": distance_metres,
+        "duration_seconds": max(30, int(distance_metres / speed)),
+        "provider": "straight_line",
+    }
 
 PROFILE_MAP = {
     "walking": "walking",
@@ -157,4 +187,5 @@ async def calculate_route(
                 "provider": "openrouteservice",
             }
 
-    return None
+    logger.info("No routing provider available — falling back to straight-line route")
+    return _straight_line_route(origin, destination, mode)

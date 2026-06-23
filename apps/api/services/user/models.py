@@ -1,6 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from geoalchemy2 import Geometry
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func, text
@@ -39,10 +40,10 @@ class User(Base):
         primary_key=True,
         server_default=text("uuid_generate_v4()"),
     )
-    email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
-    phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role", create_type=False),
         nullable=False,
@@ -53,8 +54,8 @@ class User(Base):
         nullable=False,
         server_default="pending",
     )
-    camp_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    zone: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    camp_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    zone: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()

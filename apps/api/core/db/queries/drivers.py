@@ -45,6 +45,43 @@ async def find_nearest_available_drivers(
     return result.fetchall()
 
 
+async def get_driver_distance_to_point(
+    driver_id: uuid.UUID,
+    lon: float,
+    lat: float,
+    session: AsyncSession,
+) -> float | None:
+    result = await session.execute(
+        text("""
+            SELECT ST_Distance(
+                dp.current_location::geography,
+                ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography
+            )
+            FROM driver_profiles dp
+            WHERE dp.user_id = :driver_id AND dp.current_location IS NOT NULL
+        """),
+        {"driver_id": driver_id, "lon": lon, "lat": lat},
+    )
+    row = result.fetchone()
+    return float(row[0]) if row else None
+
+
+async def update_driver_location(
+    user_id: uuid.UUID,
+    lat: float,
+    lon: float,
+    session: AsyncSession,
+) -> None:
+    await session.execute(
+        text("""
+            UPDATE driver_profiles
+            SET current_location = ST_SetSRID(ST_Point(:lon, :lat), 4326), updated_at = NOW()
+            WHERE user_id = :user_id
+        """),
+        {"user_id": user_id, "lat": lat, "lon": lon},
+    )
+
+
 async def mark_driver_availability(
     user_id: uuid.UUID,
     is_available: bool,

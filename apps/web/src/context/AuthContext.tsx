@@ -19,18 +19,11 @@ const REFRESH_KEY = 'cp_admin_refresh';
 const USER_KEY  = 'cp_admin_user';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user,         setUser]         = useState<User | null>(null);
-  const [token,        setToken]        = useState<string | null>(null);
-  const [refreshToken, setRefreshToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const t = localStorage.getItem(TOKEN_KEY);
-    const r = localStorage.getItem(REFRESH_KEY);
-    const u = localStorage.getItem(USER_KEY);
-    if (t && r && u) {
-      try { setToken(t); setRefreshToken(r); setUser(JSON.parse(u)); } catch {}
-    }
-  }, []);
+  const [user,         setUser]         = useState<User | null>(() => {
+    try { const u = localStorage.getItem(USER_KEY); return u ? JSON.parse(u) : null; } catch { return null; }
+  });
+  const [token,        setToken]        = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [refreshToken, setRefreshToken] = useState<string | null>(() => localStorage.getItem(REFRESH_KEY));
 
   async function login(email: string, password: string) {
     const res = await fetch(`${API}/api/v1/auth/login`, {

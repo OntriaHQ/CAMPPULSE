@@ -45,7 +45,28 @@ interface Props {
   height?: string;
 }
 
-const DEFAULT_STYLE = 'mapbox://styles/mapbox/dark-v11';
+const DEFAULT_STYLE: any = {
+  version: 8,
+  sources: {
+    'google-maps': {
+      type: 'raster',
+      tiles: [
+        'http://mt0.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'http://mt2.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        'http://mt3.google.com/vt/lyrs=m&x={x}&y={y}&z={z}'
+      ],
+      tileSize: 256,
+    }
+  },
+  layers: [{
+    id: 'google-maps-layer',
+    type: 'raster',
+    source: 'google-maps',
+    minzoom: 0,
+    maxzoom: 22
+  }]
+};
 
 export default function CampMap({
   markers = [],
@@ -78,7 +99,9 @@ export default function CampMap({
       container: container.current,
       style: DEFAULT_STYLE,
       center: [REDEMPTION_CITY_CENTER.lon, REDEMPTION_CITY_CENTER.lat],
-      zoom: 13,
+      zoom: 15,
+      minZoom: 14,
+      maxBounds: [[3.4200, 6.7800], [3.4700, 6.8200]],
       attributionControl: false,
       interactive,
     });
@@ -120,20 +143,40 @@ export default function CampMap({
     markersRef.current = [];
 
     markers.forEach((mkr) => {
-      const el = document.createElement('div');
-      el.style.width = `${mkr.size ?? 14}px`;
-      el.style.height = `${mkr.size ?? 14}px`;
-      el.style.borderRadius = '50%';
-      el.style.background = mkr.color ?? '#6366f1';
-      el.style.cursor = 'pointer';
-      el.style.boxShadow = `0 0 6px ${mkr.color ?? '#6366f1'}80`;
-      el.title = mkr.label ?? '';
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.alignItems = 'center';
+      wrap.style.gap = '6px';
+      wrap.style.cursor = 'pointer';
 
-      if (onMarkerClick && mkr.data) {
-        el.addEventListener('click', () => onMarkerClick(mkr));
+      const dot = document.createElement('div');
+      dot.style.width = `${mkr.size ?? 14}px`;
+      dot.style.height = `${mkr.size ?? 14}px`;
+      dot.style.flexShrink = '0';
+      dot.style.borderRadius = '50%';
+      dot.style.background = mkr.color ?? '#6366f1';
+      dot.style.boxShadow = `0 0 6px ${mkr.color ?? '#6366f1'}80`;
+      wrap.appendChild(dot);
+
+      if (mkr.label) {
+        const tag = document.createElement('div');
+        tag.textContent = mkr.label;
+        tag.style.background = 'rgba(13,13,24,0.85)';
+        tag.style.color = '#fff';
+        tag.style.fontSize = '11px';
+        tag.style.fontWeight = '600';
+        tag.style.padding = '2px 8px';
+        tag.style.borderRadius = '6px';
+        tag.style.whiteSpace = 'nowrap';
+        tag.style.border = `1px solid ${mkr.color ?? '#6366f1'}80`;
+        wrap.appendChild(tag);
       }
 
-      const marker = new mapboxgl.Marker({ element: el })
+      if (onMarkerClick && mkr.data) {
+        wrap.addEventListener('click', () => onMarkerClick(mkr));
+      }
+
+      const marker = new mapboxgl.Marker({ element: wrap, anchor: 'left' })
         .setLngLat([mkr.lng, mkr.lat])
         .addTo(map);
 
@@ -219,14 +262,14 @@ export default function CampMap({
         'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 10, 0.6, 16, 2.0],
         'heatmap-color': [
           'interpolate', ['linear'], ['heatmap-density'],
-          0,   'rgba(0,0,0,0)',
-          0.15, 'rgba(234,179,8,0.4)',
-          0.4,  'rgba(249,115,22,0.6)',
-          0.7,  'rgba(239,68,68,0.78)',
-          1,    'rgba(239,68,68,0.92)',
+          0,    'rgba(0,0,0,0)',
+          0.15, 'rgba(253,224,71,0.55)',
+          0.4,  'rgba(249,115,22,0.7)',
+          0.7,  'rgba(239,68,68,0.82)',
+          1,    'rgba(185,28,28,0.92)',
         ],
         'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 10, 45, 14, 70, 17, 100],
-        'heatmap-opacity': 0.78,
+        'heatmap-opacity': 0.72,
       },
     }, firstSymbol);
   }, [heatmapPoints, loaded]);

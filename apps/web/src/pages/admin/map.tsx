@@ -35,6 +35,7 @@ export default function AdminMapPage() {
   const [selectedIncident,setSelectedIncident]= useState<MapMarker | null>(null);
   const [alert,           setAlert]           = useState<{ zone: string; severity: string } | null>(null);
   const [showHeatmap,     setShowHeatmap]     = useState(true);
+  const [showUsers,       setShowUsers]       = useState(false);
 
   const { subscribe } = useGuestWebSocket();
 
@@ -68,7 +69,7 @@ export default function AdminMapPage() {
   // --- derived data ---
 
   const incidentMarkers: MapMarker[] = (data?.incidents ?? []).map(inc => ({
-    id: inc.id,
+    id: `inc-${inc.id}`,
     lat: inc.lat,
     lng: inc.lon,
     color: SEV_COLOR[inc.severity] ?? '#888',
@@ -88,7 +89,10 @@ export default function AdminMapPage() {
 
   const heatmapPoints: HeatmapPoint[] = (data?.incidents ?? [])
     .filter(inc => inc.lat && inc.lon)
-    .map(inc => ({ lat: inc.lat, lng: inc.lon, weight: SEV_WEIGHT[inc.severity] ?? 0.3 }));
+    .map(inc => ({ lat: inc.lat, lng: inc.lon, weight: SEV_WEIGHT[inc.severity] ?? 0.3 }))
+    .concat(
+      (data?.users ?? []).map(u => ({ lat: u.lat, lng: u.lon, weight: 0.15 }))
+    );
 
   // zone congestion scores
   type ZoneStat = { score: number; incidents: number; users: number };
@@ -116,27 +120,38 @@ export default function AdminMapPage() {
         {/* Map */}
         <div style={{ flex: 1, position: 'relative' }}>
           <CampMap
-            markers={[...incidentMarkers, ...userMarkers]}
+            markers={showUsers ? [...incidentMarkers, ...userMarkers] : incidentMarkers}
             lines={[]}
             heatmapPoints={showHeatmap ? heatmapPoints : []}
             boundary={boundaryData as any}
-            onMarkerClick={setSelectedIncident}
+            onMarkerClick={m => m.id.startsWith('inc') && setSelectedIncident(m)}
             height="100%"
           />
 
-          {/* Heatmap toggle */}
-          <button
-            onClick={() => setShowHeatmap(v => !v)}
-            style={{
-              position: 'absolute', top: 12, left: 12, zIndex: 10,
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              background: showHeatmap ? 'rgba(239,68,68,0.85)' : 'rgba(13,13,24,0.85)',
-              border: `1px solid ${showHeatmap ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.12)'}`,
-              color: '#fff', cursor: 'pointer', backdropFilter: 'blur(8px)',
-            }}
-          >
-            {showHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
-          </button>
+          <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 10, display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setShowHeatmap(!showHeatmap)}
+              style={{
+                background: showHeatmap ? 'rgba(239,68,68,0.85)' : 'rgba(13,13,24,0.85)',
+                color: '#fff', border: 'none', padding: '6px 12px',
+                borderRadius: 8, fontSize: 13, cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              {showHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
+            </button>
+            <button
+              onClick={() => setShowUsers(!showUsers)}
+              style={{
+                background: showUsers ? '#60a5fa' : 'rgba(13,13,24,0.85)',
+                color: '#fff', border: 'none', padding: '6px 12px',
+                borderRadius: 8, fontSize: 13, cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+              }}
+            >
+              {showUsers ? 'Hide Users' : 'Show Users'}
+            </button>
+          </div>
 
           {error && (
             <div style={{

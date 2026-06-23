@@ -13,6 +13,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -21,10 +22,11 @@ import { Input } from '@/components/ui/Input';
 import { Fonts, GradientColors, Radius, Spacing } from '@/constants/theme';
 import { useColors } from '@/context/ThemeContext';
 
-type IncidentType = 'flooding' | 'road_damage' | 'streetlight' | 'water_supply' | 'congestion' | 'power_outage' | 'lost_person' | 'sanitation' | 'facility_damage' | 'other';
+type IncidentType = 'security' | 'flooding' | 'road_damage' | 'streetlight' | 'water_supply' | 'congestion' | 'power_outage' | 'lost_person' | 'sanitation' | 'facility_damage' | 'other';
 type Severity = 'low' | 'medium' | 'high' | 'critical';
 
 const INCIDENT_TYPES: { key: IncidentType; label: string; symbol: string }[] = [
+  { key: 'security',        label: 'Security SOS',   symbol: '🛡️'  },
   { key: 'flooding',        label: 'Flooding',       symbol: '~'   },
   { key: 'road_damage',     label: 'Road Damage',    symbol: '◎'   },
   { key: 'streetlight',     label: 'Streetlight',    symbol: '◈'   },
@@ -108,6 +110,7 @@ export default function ReportScreen() {
 
       if (res.ok) {
         setSubmitted(true);
+        DeviceEventEmitter.emit('demo_incident_reported', { type: incidentType, severity });
       } else {
         const data = await res.json();
         Alert.alert('Error', data?.error?.message ?? 'Submission failed. Please try again.');

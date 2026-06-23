@@ -1,5 +1,5 @@
 import time
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -13,8 +13,8 @@ class AppError(Exception):
         code: str,
         message: str,
         status_code: int = 400,
-        field: str | None = None,
-        fields: list[dict[str, str]] | None = None,
+        field: Optional[str] = None,
+        fields: Optional[List[Dict[str, str]]] = None,
     ):
         self.code = code
         self.message = message
@@ -47,7 +47,7 @@ class ValidationError(AppError):
     def __init__(
         self,
         message: str = "Request payload validation failed.",
-        fields: list[dict[str, str]] | None = None,
+        fields: Optional[List[Dict[str, str]]] = None,
     ):
         super().__init__(
             code="VALIDATION_ERROR",
@@ -67,7 +67,7 @@ def _request_id(request: Request) -> str:
 
 
 def error_response(request: Request, exc: AppError) -> dict[str, Any]:
-    error: dict[str, Any] = {
+    error: Dict[str, Any] = {
         "code": exc.code,
         "message": exc.message,
     }

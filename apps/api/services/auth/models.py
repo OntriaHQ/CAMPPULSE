@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, text
 from sqlalchemy.dialects.postgresql import UUID
@@ -22,7 +23,7 @@ class AuthSession(Base):
         nullable=False,
     )
     refresh_token_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    device_fingerprint: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    device_fingerprint: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     issued_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

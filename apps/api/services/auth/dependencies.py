@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, Callable
+from typing import Annotated, Callable, Optional
 
 import redis.asyncio as redis
 from fastapi import Depends, Request
@@ -52,7 +52,7 @@ async def optional_user(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
     redis_client: Annotated[redis.Redis, Depends(get_redis_client)],
-) -> User | None:
+) -> Optional[User]:
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         return None

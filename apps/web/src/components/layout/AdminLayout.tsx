@@ -23,15 +23,9 @@ export function AdminLayout({ title, subtitle, children }: Props) {
   const [badgeCount, setBadgeCount] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('cp_admin_token');
-    if (!token) return;
-    fetch(`${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/graphql`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ query: '{ dashboardSummary { open_incidents } }' }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d?.data?.dashboardSummary?.open_incidents != null) setBadgeCount(String(d.data.dashboardSummary.open_incidents)); })
+    import('../../services/admin')
+      .then(({ fetchDashboardSummary }) => fetchDashboardSummary())
+      .then(d => { if (d?.open_incidents != null) setBadgeCount(String(d.open_incidents)); })
       .catch(() => {});
   }, []);
 

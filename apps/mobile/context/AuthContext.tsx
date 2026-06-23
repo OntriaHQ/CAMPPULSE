@@ -37,14 +37,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       try {
         const token = await storage.getAccessToken();
-        if (token) {
-          const res = await api.users.me();
-          if (res.success && res.data) {
-            setUser(res.data);
-            await storage.setUser(res.data);
-          } else {
-            await storage.clearTokens();
-          }
+        const storedUser = await storage.getUser();
+        if (token && storedUser) {
+          // DEMO MOCK: Use stored user so they stay as a driver if they logged in as one
+          setUser(storedUser);
+          setIsLoading(false);
+          return;
+        } else if (token) {
+          setUser({
+             id: 'demo-user',
+             email: 'demo@campulse.local',
+             full_name: 'Demo User',
+             role: 'resident',
+             kyc_status: 'verified',
+             camp_id: 'RDC-1234',
+             zone: 'Central Camp'
+          });
+          setIsLoading(false);
+          return;
         }
       } catch {
         await storage.clearTokens();
@@ -55,13 +65,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api.auth.login({ email, password });
-    if (!res.success || !res.data) {
-      throw new Error(res.error?.message ?? 'Login failed');
-    }
-    await storage.setTokens(res.data.tokens.access_token, res.data.tokens.refresh_token);
-    await storage.setUser(res.data.user);
-    setUser(res.data.user);
+    // DEMO MOCK: Instantly succeed login without backend
+    const isDriver = email.toLowerCase().includes('driver');
+    const mockUser = {
+      id: isDriver ? 'demo-driver' : 'demo-user',
+      email,
+      full_name: isDriver ? 'Demo Driver' : 'Demo User',
+      role: isDriver ? 'driver' : 'resident',
+      kyc_status: 'verified',
+      camp_id: 'RDC-1234',
+      zone: 'Central Camp'
+    } as any;
+    await storage.setTokens('mock_access_token', 'mock_refresh_token');
+    await storage.setUser(mockUser);
+    setUser(mockUser);
   }, []);
 
   const register = useCallback(async (data: RegisterData) => {

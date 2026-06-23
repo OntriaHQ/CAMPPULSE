@@ -6,10 +6,12 @@ stores location in Redis, and publishes location.ping event.
 
 import logging
 import time
+import uuid
 
 import redis.asyncio as redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.db.queries.drivers import update_driver_location
 from core.db.queries.locations import get_zone_for_point
 from services.realtime.geofence import is_within_boundary
 from services.realtime.publisher import publish_location_ping, store_location
@@ -53,6 +55,7 @@ async def ingest_ping(
     lon: float,
     accuracy: float | None = None,
     timestamp: int | None = None,
+    role: str | None = None,
 ) -> bool:
     """Process an authenticated location ping.
 
@@ -72,6 +75,10 @@ async def ingest_ping(
 
     await store_location(redis_client, user_id, lat, lon, zone)
     await publish_location_ping(redis_client, user_id, lat, lon, zone, ts)
+
+    if role == "driver":
+        await update_driver_location(uuid.UUID(user_id), lat, lon, session)
+        await session.commit()
 
     return True
 

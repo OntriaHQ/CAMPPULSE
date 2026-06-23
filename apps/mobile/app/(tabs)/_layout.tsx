@@ -76,6 +76,8 @@ export default function TabLayout() {
       <Tabs.Screen name="my-reports" />
       <Tabs.Screen name="profile" />
       <Tabs.Screen name="report" options={{ href: null }} />
+      <Tabs.Screen name="ride" options={{ href: null }} />
+      <Tabs.Screen name="drive" options={{ href: null }} />
     </Tabs>
   );
 }

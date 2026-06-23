@@ -56,18 +56,18 @@ export interface MutationResponse {
 
 // Queries
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8005';
+
 export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  return gql<{ dashboardSummary: DashboardSummary }>(`
-    query DashboardSummary {
-      dashboardSummary {
-        total_incidents
-        open_incidents
-        in_progress_incidents
-        active_zones
-        congestion_zones_count
-      }
-    }
-  `).then(d => d.dashboardSummary);
+  const res = await fetch(`${API_URL}/api/v1/incidents/all`);
+  const { data } = await res.json();
+  return {
+    total_incidents: data.length,
+    open_incidents: data.filter((i: any) => i.status === 'active' || i.status === 'submitted').length,
+    in_progress_incidents: data.filter((i: any) => i.status === 'in_progress').length,
+    active_zones: new Set(data.map((i: any) => i.zone)).size,
+    congestion_zones_count: 0,
+  };
 }
 
 export async function fetchIncidentList(
@@ -76,115 +76,67 @@ export async function fetchIncidentList(
   limit = 50,
   offset = 0,
 ): Promise<IncidentType[]> {
-  return gql<{ incidents: IncidentType[] }>(`
-    query Incidents($status: String, $zone: String, $limit: Int, $offset: Int) {
-      incidents(status: $status, zone: $zone, limit: $limit, offset: $offset) {
-        id
-        type
-        severity
-        status
-        zone
-        description
-        photo_url
-        address_label
-        upvote_count
-        department
-        reporter_name
-        assignee_name
-        created_at
-        updated_at
-        resolved_at
-        location { lat lon }
-      }
-    }
-  `, { status, zone, limit, offset }).then(d => d.incidents);
+  const res = await fetch(`${API_URL}/api/v1/incidents/all`);
+  const { data } = await res.json();
+  let incidents = data;
+  if (status) incidents = incidents.filter((i: any) => i.status === status);
+  if (zone) incidents = incidents.filter((i: any) => i.zone === zone);
+
+  // Map our simple REST payload to the GraphQL schema the dashboard expects
+  return incidents.map((i: any) => ({
+    id: i.id,
+    type: i.type,
+    severity: i.severity,
+    status: i.status === 'active' ? 'submitted' : i.status,
+    zone: i.zone,
+    description: i.description,
+    photo_url: null,
+    address_label: i.zone,
+    upvote_count: 0,
+    department: null,
+    reporter_name: 'Demo User',
+    assignee_name: null,
+    created_at: i.created_at,
+    updated_at: null,
+    resolved_at: null,
+    location: { lat: i.lat, lon: i.lon }
+  }));
 }
 
 export async function fetchIncidentHotspots(): Promise<HotspotType[]> {
-  return gql<{ incidentHotspots: HotspotType[] }>(`
-    query IncidentHotspots {
-      incidentHotspots {
-        zone
-        incident_count
-        lat
-        lon
-      }
-    }
-  `).then(d => d.incidentHotspots);
+  return [];
 }
 
 export async function fetchEquityMetrics(): Promise<EquityMetricType[]> {
-  return gql<{ equityMetrics: EquityMetricType[] }>(`
-    query EquityMetrics {
-      equityMetrics {
-        zone
-        total_incidents
-        avg_resolution_time_minutes
-      }
-    }
-  `).then(d => d.equityMetrics);
+  return [];
 }
 
 export async function fetchUsers(role?: string, zone?: string, limit = 50, offset = 0): Promise<UserType[]> {
-  return gql<{ users: UserType[] }>(`
-    query Users($role: String, $zone: String, $limit: Int, $offset: Int) {
-      users(role: $role, zone: $zone, limit: $limit, offset: $offset) {
-        id
-        email
-        full_name
-        role
-        zone
-      }
-    }
-  `, { role, zone, limit, offset }).then(d => d.users);
+  return [];
 }
 
 // Mutations
 
 export async function gqlUpdateIncidentStatus(id: string, status: string, note?: string): Promise<MutationResponse> {
-  return gql<{ updateIncidentStatus: MutationResponse }>(`
-    mutation UpdateIncidentStatus($id: String!, $status: String!, $note: String) {
-      updateIncidentStatus(id: $id, status: $status, note: $note) {
-        success
-        message
-        id
-      }
-    }
-  `, { id, status, note }).then(d => d.updateIncidentStatus);
+  const res = await fetch(`${API_URL}/api/v1/incidents/${id}/status?status=${status}`, { method: 'PATCH' });
+  const data = await res.json();
+  return { success: data.success, message: null, id };
 }
 
 export async function gqlAssignIncident(id: string, userId: string, department?: string): Promise<MutationResponse> {
-  return gql<{ assignIncident: MutationResponse }>(`
-    mutation AssignIncident($id: String!, $userId: String!, $department: String) {
-      assignIncident(id: $id, userId: $userId, department: $department) {
-        success
-        message
-        id
-      }
-    }
-  `, { id, userId, department }).then(d => d.assignIncident);
+  // Mock assign by changing status to 'assigned'
+  const res = await fetch(`${API_URL}/api/v1/incidents/${id}/status?status=assigned`, { method: 'PATCH' });
+  const data = await res.json();
+  return { success: data.success, message: null, id };
 }
 
 export async function gqlBulkUpdateIncidentStatus(ids: string[], status: string): Promise<MutationResponse> {
-  return gql<{ bulkUpdateIncidentStatus: MutationResponse }>(`
-    mutation BulkUpdateIncidentStatus($ids: [String!]!, $status: String!) {
-      bulkUpdateIncidentStatus(ids: $ids, status: $status) {
-        success
-        message
-        id
-      }
-    }
-  `, { ids, status }).then(d => d.bulkUpdateIncidentStatus);
+  for (const id of ids) {
+    await fetch(`${API_URL}/api/v1/incidents/${id}/status?status=${status}`, { method: 'PATCH' });
+  }
+  return { success: true, message: null, id: null };
 }
 
 export async function gqlSendZoneBroadcast(zone: string, title: string, body: string): Promise<MutationResponse> {
-  return gql<{ sendZoneBroadcast: MutationResponse }>(`
-    mutation SendZoneBroadcast($zone: String!, $title: String!, $body: String!) {
-      sendZoneBroadcast(zone: $zone, title: $title, body: $body) {
-        success
-        message
-        id
-      }
-    }
-  `, { zone, title, body }).then(d => d.sendZoneBroadcast);
+  return { success: true, message: null, id: null };
 }

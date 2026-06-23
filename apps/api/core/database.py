@@ -1,9 +1,10 @@
 import asyncpg
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
-_pool: asyncpg.Pool | None = None
-engine: AsyncEngine | None = None
-async_session_factory: async_sessionmaker[AsyncSession] | None = None
+_pool: Optional[asyncpg.Pool] = None
+engine: Optional[AsyncEngine] = None
+async_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 
 def normalize_database_url(url: str) -> str:

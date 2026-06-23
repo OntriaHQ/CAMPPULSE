@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import redis.asyncio as redis
 from sqlalchemy import select
@@ -51,7 +51,7 @@ async def _issue_tokens(
 ) -> TokenPair:
     refresh_token = generate_refresh_token()
     refresh_hash = hash_refresh_token(refresh_token)
-    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
 
     auth_session = AuthSession(
         user_id=user.id,
@@ -142,7 +142,7 @@ async def refresh_tokens(
         select(AuthSession).where(
             AuthSession.refresh_token_hash == token_hash,
             AuthSession.revoked.is_(False),
-            AuthSession.expires_at > datetime.now(UTC),
+            AuthSession.expires_at > datetime.now(timezone.utc),
         )
     )
     if auth_session is None:
@@ -156,7 +156,7 @@ async def refresh_tokens(
 
     refresh_token = generate_refresh_token()
     refresh_hash = hash_refresh_token(refresh_token)
-    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
 
     new_session = AuthSession(
         user_id=user.id,
@@ -194,7 +194,7 @@ async def logout_user(
     jti = claims.get("jti")
     exp = claims.get("exp")
     if jti and exp:
-        ttl = max(int(exp - datetime.now(UTC).timestamp()), 1)
+        ttl = max(int(exp - datetime.now(timezone.utc).timestamp()), 1)
         await redis_client.set(blacklist_key(jti), "1", ex=ttl)
 
     result = await session.execute(

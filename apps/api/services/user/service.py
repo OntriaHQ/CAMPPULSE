@@ -1,5 +1,6 @@
 import uuid
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.db.queries.drivers import (
@@ -46,10 +47,12 @@ async def update_user_role(
         )
 
     user.role = UserRole(new_role)
-    
+
     if user.role == UserRole.driver:
-        # Check if profile already exists
-        if not user.driver_profile:
+        existing_profile = await session.scalar(
+            select(DriverProfile).where(DriverProfile.user_id == user.id)
+        )
+        if existing_profile is None:
             profile = DriverProfile(
                 user_id=user.id,
                 vehicle_type=VehicleType.tricycle,  # default

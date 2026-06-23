@@ -11,20 +11,20 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  DeviceEventEmitter,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import type WebViewType from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
-import { Fonts, GradientColors, Radius } from '@/constants/theme';
-import { useTheme, useColors } from '@/context/ThemeContext';
+import { Fonts, GradientColors, LightColors, Radius } from '@/constants/theme';
 import { getIncidentsNearby } from '../../services/incidents';
 import { calculateRoute } from '../../services/routes';
 import { wsManager } from '../../services/websocket';
 import { useLocation } from '../../hooks/useLocation';
 
-const CAMP_LAT = 6.7617;
-const CAMP_LNG = 3.6664;
+const CAMP_LAT = 6.8005;
+const CAMP_LNG = 3.4447;
 const WS_GUEST_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000')
   .replace(/^http/, 'ws') + '/ws/location/guest';
 
@@ -54,16 +54,40 @@ interface Destination {
 }
 
 const DESTINATIONS: Destination[] = [
-  { id: 'd1', name: 'Main Auditorium',     area: 'Central Camp',     lat: 6.7617, lng: 3.6664 },
-  { id: 'd2', name: 'Festival Arena',      area: 'East Wing',        lat: 6.7630, lng: 3.6680 },
-  { id: 'd3', name: 'North Gate',          area: 'Camp Entrance',    lat: 6.7650, lng: 3.6660 },
-  { id: 'd4', name: 'Medical Centre',      area: 'South Block',      lat: 6.7600, lng: 3.6650 },
-  { id: 'd5', name: 'Canaan Land Estate',  area: 'Residential Zone', lat: 6.7580, lng: 3.6640 },
-  { id: 'd6', name: 'Camp Bus Terminal',   area: 'West Gate',        lat: 6.7640, lng: 3.6700 },
-  { id: 'd7', name: 'Dining Hall',         area: 'Central Camp',     lat: 6.7610, lng: 3.6670 },
-  { id: 'd8', name: 'Camp Bookshop',       area: 'Admin Block',      lat: 6.7620, lng: 3.6660 },
-  { id: 'd9', name: 'VIP Guest House',     area: 'North Wing',       lat: 6.7635, lng: 3.6655 },
-  { id: 'd10', name: 'Prayer Mountain',    area: 'Mountain Zone',    lat: 6.7560, lng: 3.6630 },
+  { id: 'd1', name: 'The Arena (Main Auditorium)', area: 'Central Camp', lat: 6.8005, lng: 3.4447 },
+  { id: 'd2', name: 'Open Heavens International Centre', area: 'Heritage Zone', lat: 6.8010, lng: 3.4452 },
+  { id: 'd3', name: 'Emmanuel Park', area: 'Recreation', lat: 6.8055, lng: 3.4480 },
+  { id: 'd4', name: 'Redeemed Bible College', area: 'Education', lat: 6.8065, lng: 3.4440 },
+  { id: 'd5', name: 'Shiloh Apartments', area: 'Residential Zone', lat: 6.8020, lng: 3.4420 },
+  { id: 'd6', name: 'International Guest House', area: 'Hospitality', lat: 6.8035, lng: 3.4460 },
+  { id: 'd7', name: 'Joy to the Wise', area: 'Residential Zone', lat: 6.8045, lng: 3.4435 },
+  { id: 'd8', name: 'Redemption City Power Station', area: 'Utilities', lat: 6.7990, lng: 3.4490 },
+  { id: 'd9', name: 'Tantalizers', area: 'Food Court', lat: 6.8015, lng: 3.4470 },
+  { id: 'd10', name: 'Shalom Restaurant', area: 'Food Court', lat: 6.8025, lng: 3.4485 },
+  { id: 'd11', name: 'RCCG Clinic & Hospital', area: 'Health Zone', lat: 6.8010, lng: 3.4430 },
+  { id: 'd12', name: 'Camp Secretariat', area: 'Admin Block', lat: 6.8020, lng: 3.4465 },
+  { id: 'd13', name: 'Dove Television Studios', area: 'Media Zone', lat: 6.8040, lng: 3.4490 },
+  { id: 'd14', name: 'Camp Bus Terminal', area: 'Transport', lat: 6.8050, lng: 3.4435 },
+  { id: 'd15', name: 'Car Park F', area: 'Parking', lat: 6.8070, lng: 3.4475 },
+  // Places from Google Maps Screenshot
+  { id: 'd16', name: 'Haggai Estate 3', area: 'Residential Zone', lat: 6.8060, lng: 3.4400 },
+  { id: 'd17', name: 'Haggai Estate 4', area: 'Residential Zone', lat: 6.8070, lng: 3.4420 },
+  { id: 'd18', name: 'White House Suites', area: 'Hospitality', lat: 6.8040, lng: 3.4445 },
+  { id: 'd19', name: 'Moses Apartment', area: 'Residential Zone', lat: 6.8035, lng: 3.4470 },
+  { id: 'd20', name: 'TE Creative Global', area: 'Business', lat: 6.8025, lng: 3.4480 },
+  { id: 'd21', name: 'Coman Digita', area: 'Business', lat: 6.8015, lng: 3.4490 },
+  { id: 'd22', name: 'Canaan Land Market', area: 'Commercial Zone', lat: 6.8060, lng: 3.4495 },
+  { id: 'd23', name: 'Goshen Estate RCCG', area: 'Residential Zone', lat: 6.8050, lng: 3.4510 },
+  { id: 'd24', name: 'Transfodd Solution Limited', area: 'Business', lat: 6.8030, lng: 3.4520 },
+  { id: 'd25', name: 'GTB Bank', area: 'Financial Zone', lat: 6.8065, lng: 3.4460 },
+  { id: 'd26', name: 'Creativity Technology Hubs', area: 'Tech Zone', lat: 6.7990, lng: 3.4500 },
+  { id: 'd27', name: 'Redemption City Old Arena', area: 'Heritage Zone', lat: 6.8020, lng: 3.4410 },
+  { id: 'd28', name: 'RCCG National Secretariat', area: 'Admin Block', lat: 6.8005, lng: 3.4440 },
+  { id: 'd29', name: 'Car Park B', area: 'Parking', lat: 6.7990, lng: 3.4400 },
+  { id: 'd30', name: 'Redeemer\'s Health Village Hospital', area: 'Health Zone', lat: 6.7970, lng: 3.4390 },
+  { id: 'd31', name: 'ESTATE 10 RECREATION CENTER', area: 'Recreation', lat: 6.7960, lng: 3.4440 },
+  { id: 'd32', name: 'Praise close, Estate 9', area: 'Residential Zone', lat: 6.8000, lng: 3.4490 },
+  { id: 'd33', name: 'Mighty Warrior Villa', area: 'Residential Zone', lat: 6.8020, lng: 3.4530 },
 ];
 
 function buildMapHtml(
@@ -86,7 +110,7 @@ function buildMapHtml(
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body, #map { width: 100%; height: 100%; background: #0A0A0F; }
+    html, body, #map { width: 100%; height: 100%; background: #EAEAEA; }
     .leaflet-control-attribution, .leaflet-control-zoom { display: none; }
     .pin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.85); }
     .user { width: 14px; height: 14px; border-radius: 50%; background:#0EA5E9; border:3px solid #fff; box-shadow:0 0 0 6px rgba(14,165,233,0.2); }
@@ -97,8 +121,29 @@ function buildMapHtml(
 </head>
 <body><div id="map"></div>
 <script>
-  const map = L.map('map',{center:[${userLat},${userLng}],zoom:15,zoomControl:false,attributionControl:false});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd'}).addTo(map);
+  const map = L.map('map',{
+    center:[${userLat},${userLng}],
+    zoom:15,
+    minZoom:14,
+    maxBounds: [[6.7800, 3.4200], [6.8200, 3.4650]],
+    maxBoundsViscosity: 1.0,
+    zoomControl:false,
+    attributionControl:false
+  });
+  L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0','mt1','mt2','mt3']
+  }).addTo(map);
+
+  map.on('click', function(e) {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ 
+        type: 'map_click', 
+        lat: e.latlng.lat, 
+        lng: e.latlng.lng 
+      }));
+    }
+  });
 
   const incidents = ${JSON.stringify(incidents)};
   const colors = ${JSON.stringify(SEV_COLOR)};
@@ -152,10 +197,10 @@ function buildMapHtml(
         destMarker = L.marker([msg.lat, msg.lng], {icon: dIcon}).addTo(map);
         if (msg.polyline && msg.polyline.length > 0) {
           routeLine = L.polyline(msg.polyline, {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
-          map.fitBounds(routeLine.getBounds().pad(0.2));
+          map.fitBounds(routeLine.getBounds().pad(0.2), { maxZoom: 17 });
         } else {
           routeLine = L.polyline([[${userLat},${userLng}],[msg.lat,msg.lng]], {color:'#00C896',weight:3,dashArray:'8,6',opacity:0.75}).addTo(map);
-          map.fitBounds([[${userLat},${userLng}],[msg.lat,msg.lng]], {padding:[60,60]});
+          map.fitBounds([[${userLat},${userLng}],[msg.lat,msg.lng]], {padding:[60,60], maxZoom: 17});
         }
       } else if (msg.type === 'clear') {
         if (destMarker) { map.removeLayer(destMarker); destMarker = null; }
@@ -175,8 +220,8 @@ const EXPANDED  = 340;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const { isDark } = useTheme();
-  const C = useColors();
+  const isDark = false;
+  const C = LightColors;
 
   const webViewRef = useRef<WebViewType>(null);
   const sheetAnim  = useRef(new Animated.Value(COLLAPSED)).current;
@@ -188,7 +233,9 @@ export default function HomeScreen() {
   const [destination,     setDestination]      = useState<Destination | null>(null);
   const [incidents,       setIncidents]       = useState<IncidentData[]>([]);
   const [routeCoords,     setRouteCoords]     = useState<{ lat: number; lng: number }[]>([]);
-  const [zoneAlert,       setZoneAlert]       = useState<{ zone: string; severity: string } | null>(null);
+  const [routeInstructions, setRouteInstructions] = useState<{distance: number, instruction: string}[]>([]);
+  const [congestedZones,  setCongestedZones]   = useState<Record<string, string>>({ 'Main Auditorium Approach': 'critical' });
+  const [hideTips,        setHideTips]         = useState(false);
 
   const { location: userLocation } = useLocation({ sendPings: false });
 
@@ -220,15 +267,30 @@ export default function HomeScreen() {
 
   // WebSocket for real-time updates
   useEffect(() => {
+    // MOCK DEMO FLOW: Listen for the flood report, wait 5 seconds, and simulate the AI Smart Re-route!
+    const sub = DeviceEventEmitter.addListener('demo_incident_reported', (data) => {
+      setTimeout(() => {
+        setCongestedZones({ 'North Gate Approach': data.severity ?? 'critical' });
+        // Force a slight reroute on the map if they were navigating
+        setRouteCoords(prev => prev.length > 0 ? prev.map(c => ({ lat: c.lat + 0.0005, lng: c.lng - 0.0005 })) : prev);
+      }, 5000);
+    });
+
     wsManager.connect(WS_GUEST_URL);
 
     const unsubAlert = wsManager.on('zone_alert', (msg: any) => {
-      setZoneAlert({ zone: msg.payload?.zone, severity: msg.payload?.severity });
-      setTimeout(() => setZoneAlert(null), 10000);
+      const zone = msg.payload?.zone;
+      if (!zone) return;
+      setCongestedZones(z => ({ ...z, [zone]: msg.payload?.severity }));
     });
 
-    const unsubClearing = wsManager.on('zone_clearing', () => {
-      setZoneAlert(null);
+    const unsubClearing = wsManager.on('zone_clearing', (msg: any) => {
+      const zone = msg.payload?.zone;
+      setCongestedZones(z => {
+        if (!zone) return {};
+        const { [zone]: _removed, ...rest } = z;
+        return rest;
+      });
     });
 
     return () => {
@@ -269,6 +331,12 @@ export default function HomeScreen() {
         'walking',
       );
       if (route.polyline) {
+        setRouteInstructions(route.instructions || []);
+        
+        // Auto-expand sheet to show instructions
+        setSheetOpen(true);
+        Animated.spring(sheetAnim, { toValue: EXPANDED, useNativeDriver: false, bounciness: 4 }).start();
+
         import('../../services/polyline').then(mod => {
           const coords = mod.decodePolyline(route.polyline);
           setRouteCoords(coords);
@@ -296,6 +364,7 @@ export default function HomeScreen() {
   function clearDestination() {
     setDestination(null);
     setRouteCoords([]);
+    setRouteInstructions([]);
     webViewRef.current?.injectJavaScript(
       `window.dispatchEvent(new MessageEvent('message', {data: '${JSON.stringify({ type: 'clear' })}'})); true;`
     );
@@ -322,13 +391,18 @@ export default function HomeScreen() {
     ? {}
     : { backgroundColor: isDark ? 'rgba(10,10,15,0.94)' : 'rgba(244,244,249,0.97)' };
 
+  const congestedZoneEntries = Object.entries(congestedZones);
+  const primaryZoneAlert = congestedZoneEntries.length > 0
+    ? { zone: congestedZoneEntries[0][0], severity: congestedZoneEntries[0][1] }
+    : null;
+
   const mapHtml = buildMapHtml(
     incidents,
     userLat,
     userLng,
     destination,
     routeCoords,
-    zoneAlert,
+    primaryZoneAlert,
   );
 
   return (
@@ -339,6 +413,20 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         scrollEnabled={false}
         overScrollMode="never"
+        onMessage={(event) => {
+          try {
+            const data = JSON.parse(event.nativeEvent.data);
+            if (data.type === 'map_click') {
+              selectDestination({
+                id: `custom_${Date.now()}`,
+                name: 'Selected Map Location',
+                area: 'Custom Point',
+                lat: data.lat,
+                lng: data.lng,
+              });
+            }
+          } catch (e) {}
+        }}
       />
 
       {/* Top bar */}
@@ -367,13 +455,30 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Zone alert banner */}
-      {zoneAlert && (
-        <View style={[styles.alertBanner, { top: topBarBottom + 8 }]}>
-          <Ionicons name="warning" size={14} color="#fff" />
-          <Text style={styles.alertBannerText}>
-            {zoneAlert.zone} congested ({zoneAlert.severity})
-          </Text>
+      {/* Decongestion tips */}
+      {!hideTips && congestedZoneEntries.length > 0 && (
+        <View style={[styles.tipsCard, { top: topBarBottom + 8 + (destination && !searchOpen ? 74 : 0), borderColor: C.borderStrong }]}>
+          {Platform.OS === 'ios'
+            ? <BlurView intensity={75} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+            : <View style={[StyleSheet.absoluteFill, glassStyle]} />
+          }
+          <View style={[styles.tipsHeader, { justifyContent: 'space-between' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="bulb-outline" size={15} color="#F59E0B" />
+              <Text style={[styles.tipsTitle, { color: C.textPrimary }]}>Decongestion Tips</Text>
+            </View>
+            <TouchableOpacity onPress={() => setHideTips(true)} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+              <Ionicons name="close" size={16} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {congestedZoneEntries.map(([zone, severity]) => (
+            <View key={zone} style={styles.tipRow}>
+              <View style={[styles.tipDot, { backgroundColor: SEV_COLOR[severity] ?? '#F59E0B' }]} />
+              <Text style={[styles.tipText, { color: C.textSecondary }]}>
+                <Text style={{ fontFamily: Fonts.semiBold, color: C.textPrimary }}>{zone}</Text> is busy ({severity}) — avoid this area or expect delays
+              </Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -452,7 +557,7 @@ export default function HomeScreen() {
       )}
 
       {/* Quick actions */}
-      <View style={[styles.quickStack, { bottom: COLLAPSED + 90 + (insets.bottom || 0) }]}>
+      <View style={[styles.quickStack, { bottom: COLLAPSED + 156 + (insets.bottom || 0) }]}>
         <TouchableOpacity
           onPress={recenter}
           style={[styles.quickBtn, { backgroundColor: isDark ? 'rgba(8,8,14,0.80)' : 'rgba(244,244,249,0.92)', borderColor: C.borderStrong }]}
@@ -467,8 +572,14 @@ export default function HomeScreen() {
         ))}
       </View>
 
-      {/* Report FAB */}
-      <Animated.View style={[styles.fabWrap, { bottom: fabBottom }]}>
+      {/* Ride + Report FABs */}
+      <Animated.View style={[styles.fabWrap, { bottom: fabBottom, gap: 12 }]}>
+        <TouchableOpacity activeOpacity={0.88} onPress={() => router.push('/(tabs)/ride')}>
+          <LinearGradient colors={['#0EA5E9', '#0284C7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fab}>
+            <Ionicons name="car-outline" size={20} color="#fff" />
+            <Text style={styles.fabLabel}>Ride</Text>
+          </LinearGradient>
+        </TouchableOpacity>
         <TouchableOpacity activeOpacity={0.88} onPress={() => router.push('/(tabs)/report')}>
           <LinearGradient colors={GradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fab}>
             <Ionicons name="add" size={20} color="#fff" />
@@ -488,14 +599,26 @@ export default function HomeScreen() {
         <TouchableOpacity onPress={toggleSheet} style={styles.handleArea} activeOpacity={0.7}>
           <View style={styles.handle} />
           <View style={styles.sheetHead}>
-            <Text style={[styles.sheetTitle, { color: C.textPrimary }]}>Nearby Activity</Text>
+            <Text style={[styles.sheetTitle, { color: C.textPrimary }]}>
+              {routeInstructions.length > 0 ? 'Navigation Steps' : 'Nearby Activity'}
+            </Text>
             <Ionicons name={sheetOpen ? 'chevron-down' : 'chevron-up'} size={15} color={C.textMuted} />
           </View>
         </TouchableOpacity>
 
         {sheetOpen && (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.feed}>
-            {incidents.length === 0 ? (
+            {routeInstructions.length > 0 ? (
+              routeInstructions.map((step, idx) => (
+                <View key={idx} style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: C.border, flexDirection: 'row', alignItems: 'center' }}>
+                  <Ionicons name="arrow-forward-outline" size={20} color={C.accent} style={{ marginRight: 16 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: C.textPrimary, fontSize: 15, fontWeight: '500', lineHeight: 22 }}>{step.instruction}</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 13, marginTop: 4 }}>In {Math.round(step.distance)} meters</Text>
+                  </View>
+                </View>
+              ))
+            ) : incidents.length === 0 ? (
               <View style={{ padding: 20, alignItems: 'center' }}>
                 <Text style={{ color: C.textMuted, fontSize: 13 }}>No incidents nearby</Text>
               </View>
@@ -525,7 +648,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0A0A0F' },
+  root: { flex: 1, backgroundColor: '#EAEAEA' },
 
   topBar: {
     position: 'absolute', left: 16, right: 16,
@@ -541,15 +664,17 @@ const styles = StyleSheet.create({
   alertLabel:{ fontFamily: Fonts.semiBold, fontSize: 11, color: '#EF4444' },
   iconBtn:   { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 
-  alertBanner: {
+  tipsCard: {
     position: 'absolute', left: 16, right: 16,
-    padding: '10px 14px',
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.9)',
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: Radius.xl, overflow: 'hidden', borderWidth: 1,
+    padding: 14, gap: 8,
     zIndex: 20,
   },
-  alertBannerText: { color: '#fff', fontSize: 13, fontFamily: Fonts.semiBold },
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
+  tipsTitle:  { fontFamily: Fonts.semiBold, fontSize: 13 },
+  tipRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  tipDot:     { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
+  tipText:    { flex: 1, fontFamily: Fonts.regular, fontSize: 12, lineHeight: 17 },
 
   searchPanel: {
     position: 'absolute', left: 16, right: 16,
@@ -585,7 +710,7 @@ const styles = StyleSheet.create({
   sheet:        { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, overflow: 'hidden' },
   sheetTopLine: { position: 'absolute', top: 0, left: 0, right: 0, height: 1 },
   handleArea:   { paddingTop: 10, paddingHorizontal: 20, paddingBottom: 6 },
-  handle:       { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', alignSelf: 'center', marginBottom: 10 },
+  handle:       { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.18)', alignSelf: 'center', marginBottom: 10 },
   sheetHead:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sheetTitle:   { fontFamily: Fonts.semiBold, fontSize: 14 },
 

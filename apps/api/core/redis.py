@@ -1,11 +1,14 @@
 import redis.asyncio as redis
+from typing import Optional
 
-_client: redis.Redis | None = None
+_client: Optional[redis.Redis] = None
 
 
 async def create_redis(redis_url: str) -> redis.Redis:
     global _client
-    _client = redis.from_url(redis_url, decode_responses=True)
+    # socket_timeout=None: redis-py 8.x defaults to a 5s read timeout, which
+    # kills pub/sub listen() connections on every idle gap longer than 5s.
+    _client = redis.from_url(redis_url, decode_responses=True, socket_timeout=None)
     return _client
 
 

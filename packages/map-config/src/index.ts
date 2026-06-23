@@ -26,8 +26,8 @@ export const hotspotRegistry = hotspots as HotspotRegistry;
 export const mapboxStyleConfig = mapboxStyle;
 
 export const REDEMPTION_CITY_CENTER = {
-  lat: 6.9271,
-  lon: 3.3958,
+  lat: 6.8005,
+  lon: 3.4447,
 } as const;
 
 export {
